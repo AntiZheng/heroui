@@ -2,6 +2,12 @@ import axios, { AxiosError, AxiosHeaders, type AxiosRequestConfig } from 'axios'
 import { addToast } from '@heroui/react'
 import { useAuthStore } from '../stores/auth'
 
+declare module 'axios' {
+  export interface AxiosRequestConfig {
+    silent?: boolean
+  }
+}
+
 const request = axios.create({ baseURL: '/api/v1', timeout: 15000 })
 
 request.interceptors.request.use((config) => {
@@ -10,8 +16,8 @@ request.interceptors.request.use((config) => {
   return config
 })
 
-function fail(msg: string): never {
-  addToast({ title: '操作失败', description: msg, color: 'danger' })
+function fail(msg: string, silent?: boolean): never {
+  if (!silent) addToast({ title: '操作失败', description: msg, color: 'danger' })
   throw new Error(msg)
 }
 
@@ -24,7 +30,7 @@ async function refreshAccessToken(): Promise<string | null> {
     .post('/api/v1/refresh', { refresh_token: refreshToken })
     .then((res) => {
       const data = res.data?.data
-      if (!data?.access_token) return null
+      if (!data?.access_token || !data?.refresh_token) return null
       setTokens(data.access_token, data.refresh_token)
       return data.access_token as string
     })
@@ -42,11 +48,12 @@ function forceLogout() {
 
 request.interceptors.response.use(
   (response) => {
+    if (response.config.responseType === 'blob') return response
     const res = response.data
     // R.page 分页结构原样透传
     if (res && typeof res === 'object' && 'rows' in res) return res
     if (res?.code === 200) return res.data
-    fail(res?.msg ?? '请求失败')
+    fail(res?.msg ?? '请求失败', response.config.silent)
   },
   async (error: AxiosError<{ msg?: string }>) => {
     const original = error.config as (AxiosRequestConfig & { _retried?: boolean }) | undefined
@@ -60,10 +67,12 @@ request.interceptors.response.use(
         })
         return request(original)
       }
+    }
+    if (error.response?.status === 401) {
       forceLogout()
       return fail('登录已过期，请重新登录')
     }
-    fail(error.response?.data?.msg ?? '网络异常，请稍后重试')
+    fail(error.response?.data?.msg ?? '网络异常，请稍后重试', original?.silent)
   },
 )
 
