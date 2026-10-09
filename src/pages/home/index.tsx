@@ -30,7 +30,7 @@ export default function HomePage() {
 
   const { data: server } = useQuery({
     queryKey: ['server-info'],
-    queryFn: () => request.get<never, ServerInfo>('/server', { silent: true }),
+    queryFn: () => request.get<never, ServerInfo>('/system/server', { silent: true }),
     retry: false,
   })
 
