@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button, Card, CardBody, Input, addToast } from '@heroui/react'
 import { getCaptcha, login, getInfo } from '../../api/auth'
@@ -23,8 +23,10 @@ export default function LoginPage() {
       // 验证码失败时用户可点击重试
     }
   }
-  // 首次加载拉取验证码（React 会因 StrictMode 调两次，可接受）
-  void refreshCaptcha()
+  // 首次加载拉取验证码（StrictMode 下会调两次，可接受）
+  useEffect(() => {
+    refreshCaptcha()
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
