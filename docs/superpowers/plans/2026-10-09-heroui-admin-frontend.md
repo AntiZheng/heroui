@@ -168,6 +168,7 @@ export default heroui()
 ```css
 @import 'tailwindcss';
 @plugin './hero.ts';
+@source '../node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}';
 ```
 
 - [ ] **Step 9: 写临时入口 `src/main.tsx` 和 `src/App.tsx`（验证 HeroUI 可用，后续任务会替换）**
