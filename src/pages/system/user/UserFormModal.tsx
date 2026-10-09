@@ -90,6 +90,8 @@ export default function UserFormModal({ isOpen, editing, onClose }: Props) {
       queryClient.invalidateQueries({ queryKey: ['user-list'] })
       queryClient.invalidateQueries({ queryKey: ['user-total'] })
       onClose()
+    } catch {
+      return
     } finally {
       setSaving(false)
     }

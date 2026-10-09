@@ -34,7 +34,11 @@ export default function RowActions({ row, onEdit }: Props) {
 
   const handleDelete = async () => {
     if (!window.confirm(`确定删除用户「${row.user_name}」吗？`)) return
-    await deleteUsers([row.user_id])
+    try {
+      await deleteUsers([row.user_id])
+    } catch {
+      return
+    }
     addToast({ title: '成功', description: '删除成功', color: 'success' })
     invalidate()
   }
@@ -55,7 +59,11 @@ export default function RowActions({ row, onEdit }: Props) {
       addToast({ title: '提示', description: '请输入新密码', color: 'warning' })
       return
     }
-    await resetPwd(row.user_id, newPwd)
+    try {
+      await resetPwd(row.user_id, newPwd)
+    } catch {
+      return
+    }
     addToast({ title: '成功', description: '密码已重置', color: 'success' })
     setResetOpen(false)
     setNewPwd('')

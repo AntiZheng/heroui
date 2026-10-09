@@ -30,5 +30,7 @@ export const useAuthStore = create<AuthState>()(
   ),
 )
 
-export const hasPermission = (permission: string) =>
-  useAuthStore.getState().permissions.includes(permission)
+export const hasPermission = (permission: string) => {
+  const perms = useAuthStore.getState().permissions
+  return perms.includes('*:*:*') || perms.includes(permission)
+}
