@@ -17,7 +17,10 @@ import {
   TableRow,
 } from '@heroui/react'
 import { getDeptTree, getUserList } from '../../../api/user'
+import { hasPermission } from '../../../stores/auth'
 import { flattenDeptTree } from './deptTree'
+import RowActions from './RowActions'
+import UserFormModal from './UserFormModal'
 import type { UserListQuery } from '../../../api/user'
 import type { SysUserRow } from '../../../types/user'
 
@@ -27,6 +30,17 @@ export default function UserPage() {
   const [query, setQuery] = useState<UserListQuery>({ pageNum: 1, pageSize: PAGE_SIZE })
   const [userNameInput, setUserNameInput] = useState('')
   const [phoneInput, setPhoneInput] = useState('')
+  const [formOpen, setFormOpen] = useState(false)
+  const [editing, setEditing] = useState<SysUserRow | null>(null)
+
+  const openCreate = () => {
+    setEditing(null)
+    setFormOpen(true)
+  }
+  const openEdit = (row: SysUserRow) => {
+    setEditing(row)
+    setFormOpen(true)
+  }
 
   const { data: deptOptions } = useQuery({
     queryKey: ['dept-tree'],
@@ -34,7 +48,7 @@ export default function UserPage() {
     select: flattenDeptTree,
   })
 
-  const { data, isFetching } = useQuery({
+  const { data, isPending } = useQuery({
     queryKey: ['user-list', query],
     queryFn: () => getUserList(query),
     placeholderData: keepPreviousData,
@@ -61,6 +75,7 @@ export default function UserPage() {
     { key: 'phonenumber', label: '手机号' },
     { key: 'status', label: '状态' },
     { key: 'create_time', label: '创建时间' },
+    { key: 'actions', label: '操作' },
   ]
 
   const renderCell = (row: SysUserRow, key: string) => {
@@ -71,6 +86,8 @@ export default function UserPage() {
             {row.status === '0' ? '正常' : '停用'}
           </Chip>
         )
+      case 'actions':
+        return <RowActions row={row} onEdit={openEdit} />
       default:
         return <span>{String((row as unknown as Record<string, unknown>)[key] ?? '—')}</span>
     }
@@ -118,7 +135,14 @@ export default function UserPage() {
         <CardBody className="gap-4">
           <div className="flex items-center justify-between">
             <h2 className="text-medium font-medium">用户列表</h2>
-            <span className="text-small text-foreground-500">共 {data?.total ?? 0} 条</span>
+            <div className="flex items-center gap-3">
+              <span className="text-small text-foreground-500">共 {data?.total ?? 0} 条</span>
+              {hasPermission('system:user:add') && (
+                <Button color="primary" onPress={openCreate}>
+                  新增用户
+                </Button>
+              )}
+            </div>
           </div>
           <Table aria-label="用户列表" isStriped>
             <TableHeader columns={columns}>
@@ -127,7 +151,7 @@ export default function UserPage() {
             <TableBody
               items={data?.rows ?? []}
               emptyContent="暂无数据"
-              isLoading={isFetching}
+              isLoading={isPending}
             >
               {(row) => (
                 <TableRow key={row.user_id}>
@@ -145,6 +169,8 @@ export default function UserPage() {
           </div>
         </CardBody>
       </Card>
+
+      <UserFormModal isOpen={formOpen} editing={editing} onClose={() => setFormOpen(false)} />
     </div>
   )
 }
