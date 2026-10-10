@@ -275,7 +275,7 @@ export default function UserPage() {
                   if (k) setQuery((q) => ({ ...q, pageNum: 1, pageSize: Number(k) }))
                 }}
               >
-                <SelectTrigger className="h-8! min-h-0! rounded-3xl! border-transparent! bg-transparent! px-2! py-0! text-xs! font-medium! shadow-none! hover:border-transparent! hover:bg-default-hover!">
+                <SelectTrigger className="h-8! min-h-0! items-center! rounded-3xl! border-transparent! bg-transparent! px-2! py-0! text-xs! font-medium! shadow-none! hover:border-transparent! hover:bg-default-hover!">
                   <SelectValue>
                     {({ isPlaceholder, defaultChildren }) =>
                       isPlaceholder ? <span>{pageSize} 条/页</span> : defaultChildren
@@ -339,7 +339,7 @@ export default function UserPage() {
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') jump()
                   }}
-                  className="h-8! w-12! px-1.5! py-0! text-center! text-xs!"
+                  className="h-7! w-12! px-1! py-0! text-center! text-xs!"
                 />
                 页
               </span>
