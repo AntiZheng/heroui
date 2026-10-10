@@ -6,6 +6,7 @@ import {
   CardContent,
   Chip,
   EmptyState,
+  Input,
   Label,
   ListBox,
   ListBoxItem,
@@ -63,6 +64,7 @@ export default function UserPage() {
   const [query, setQuery] = useState<UserListQuery>({ pageNum: 1, pageSize: PAGE_SIZE })
   const [userNameInput, setUserNameInput] = useState('')
   const [phoneInput, setPhoneInput] = useState('')
+  const [jumpTo, setJumpTo] = useState('')
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<SysUserRow | null>(null)
 
@@ -87,10 +89,18 @@ export default function UserPage() {
     placeholderData: keepPreviousData,
   })
 
+  const pageSize = query.pageSize ?? PAGE_SIZE
+
   const totalPages = useMemo(
-    () => Math.max(1, Math.ceil((data?.total ?? 0) / PAGE_SIZE)),
-    [data?.total],
+    () => Math.max(1, Math.ceil((data?.total ?? 0) / pageSize)),
+    [data?.total, pageSize],
   )
+
+  const jump = () => {
+    const p = Math.min(Math.max(Number(jumpTo) || 1, 1), totalPages)
+    setQuery((q) => ({ ...q, pageNum: p }))
+    setJumpTo('')
+  }
 
   const search = () =>
     setQuery((q) => ({ ...q, pageNum: 1, userName: userNameInput, phonenumber: phoneInput }))
@@ -252,45 +262,86 @@ export default function UserPage() {
           <PaginationRoot size="sm">
             <PaginationSummary>
               {data?.total
-                ? `第 ${(query.pageNum - 1) * PAGE_SIZE + 1} 至 ${Math.min(query.pageNum * PAGE_SIZE, data.total)} 条，共 ${data.total} 条`
+                ? `第 ${(query.pageNum - 1) * pageSize + 1} 至 ${Math.min(query.pageNum * pageSize, data.total)} 条，共 ${data.total} 条`
                 : '共 0 条'}
             </PaginationSummary>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  isDisabled={query.pageNum <= 1}
-                  onPress={() => setQuery((q) => ({ ...q, pageNum: q.pageNum - 1 }))}
-                >
-                  <PaginationPreviousIcon aria-hidden />
-                  上一页
-                </PaginationPrevious>
-              </PaginationItem>
-              {pageWindow(totalPages, query.pageNum).map((p, i) =>
-                p === '…' ? (
-                  <PaginationItem key={`ellipsis-${i}`}>
-                    <PaginationEllipsis />
-                  </PaginationItem>
-                ) : (
-                  <PaginationItem key={p}>
-                    <PaginationLink
-                      isActive={p === query.pageNum}
-                      onPress={() => setQuery((q) => ({ ...q, pageNum: p }))}
-                    >
-                      {p}
-                    </PaginationLink>
-                  </PaginationItem>
-                ),
-              )}
-              <PaginationItem>
-                <PaginationNext
-                  isDisabled={query.pageNum >= totalPages}
-                  onPress={() => setQuery((q) => ({ ...q, pageNum: q.pageNum + 1 }))}
-                >
-                  下一页
-                  <PaginationNextIcon aria-hidden />
-                </PaginationNext>
-              </PaginationItem>
-            </PaginationContent>
+            <div className="flex items-center gap-3">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    isDisabled={query.pageNum <= 1}
+                    onPress={() => setQuery((q) => ({ ...q, pageNum: q.pageNum - 1 }))}
+                  >
+                    <PaginationPreviousIcon aria-hidden />
+                    上一页
+                  </PaginationPrevious>
+                </PaginationItem>
+                {pageWindow(totalPages, query.pageNum).map((p, i) =>
+                  p === '…' ? (
+                    <PaginationItem key={`ellipsis-${i}`}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  ) : (
+                    <PaginationItem key={p}>
+                      <PaginationLink
+                        isActive={p === query.pageNum}
+                        onPress={() => setQuery((q) => ({ ...q, pageNum: p }))}
+                      >
+                        {p}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ),
+                )}
+                <PaginationItem>
+                  <PaginationNext
+                    isDisabled={query.pageNum >= totalPages}
+                    onPress={() => setQuery((q) => ({ ...q, pageNum: q.pageNum + 1 }))}
+                  >
+                    下一页
+                    <PaginationNextIcon aria-hidden />
+                  </PaginationNext>
+                </PaginationItem>
+              </PaginationContent>
+              <SelectRoot
+                aria-label="每页条数"
+                className="w-28"
+                selectedKey={String(pageSize)}
+                onSelectionChange={(key) => {
+                  const k = key as string | null
+                  if (k) setQuery((q) => ({ ...q, pageNum: 1, pageSize: Number(k) }))
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue>
+                    {({ isPlaceholder, defaultChildren }) =>
+                      isPlaceholder ? <span>{pageSize} 条/页</span> : defaultChildren
+                    }
+                  </SelectValue>
+                  <SelectIndicator />
+                </SelectTrigger>
+                <SelectPopover>
+                  <ListBox>
+                    {[10, 20, 50].map((n) => (
+                      <ListBoxItem key={String(n)} id={String(n)}>{n} 条/页</ListBoxItem>
+                    ))}
+                  </ListBox>
+                </SelectPopover>
+              </SelectRoot>
+              <span className="flex items-center gap-1.5 text-sm text-muted">
+                跳至
+                <Input
+                  aria-label="跳转页码"
+                  inputMode="numeric"
+                  value={jumpTo}
+                  onChange={(e) => setJumpTo(e.currentTarget.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') jump()
+                  }}
+                  className="w-14 px-2 text-center"
+                />
+                页
+              </span>
+            </div>
           </PaginationRoot>
         </TableFooter>
       </TableRoot>
