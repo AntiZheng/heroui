@@ -274,7 +274,7 @@ export default function UserPage() {
                 }}
               >
                 <SelectTrigger className="h-7! min-h-0! items-center! rounded-3xl! border-transparent! bg-transparent! px-2! py-0! text-xs! font-medium! shadow-none! hover:border-transparent! hover:bg-default-hover!">
-                  <SelectValue>
+                  <SelectValue className="text-xs!">
                     {({ isPlaceholder, defaultChildren }) =>
                       isPlaceholder ? <span>{pageSize} 条/页</span> : defaultChildren
                     }
