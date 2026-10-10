@@ -1,6 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button, Card, CardContent, Input, Label, TextField, toast } from '@heroui/react'
+import {
+  Button,
+  Card,
+  CardContent,
+  FieldError,
+  Form,
+  Input,
+  Label,
+  TextField,
+} from '@heroui/react'
 import { getCaptcha, login, getInfo } from '../../api/auth'
 import { useAuthStore } from '../../stores/auth'
 
@@ -28,12 +37,9 @@ export default function LoginPage() {
     refreshCaptcha()
   }, [])
 
+  // Form 默认 native 校验：必填未填时拦截提交，onSubmit 只在校验通过后触发
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!username || !password || !code) {
-      toast('提示', { description: '请填写完整登录信息', variant: 'warning' })
-      return
-    }
     setSubmitting(true)
     try {
       const token = await login({ username, password, code, uuid: captcha.uuid })
@@ -61,24 +67,28 @@ export default function LoginPage() {
         <Card className="w-full max-w-sm">
           <CardContent className="flex flex-col gap-4 p-8">
             <h2 className="text-2xl font-semibold">欢迎回来</h2>
-            <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-              <TextField value={username} onChange={setUsername} isRequired>
+            <Form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+              <TextField value={username} onChange={setUsername} name="username" isRequired>
                 <Label>账号</Label>
-                <Input placeholder="请输入账号" />
+                <Input placeholder="请输入账号" autoComplete="username" />
+                <FieldError />
               </TextField>
-              <TextField value={password} onChange={setPassword} isRequired>
+              <TextField value={password} onChange={setPassword} name="password" isRequired>
                 <Label>密码</Label>
-                <Input type="password" placeholder="请输入密码" />
+                <Input type="password" placeholder="请输入密码" autoComplete="current-password" />
+                <FieldError />
               </TextField>
               <div className="flex items-end gap-2">
-                <TextField value={code} onChange={setCode} isRequired className="flex-1">
+                <TextField value={code} onChange={setCode} name="code" isRequired className="flex-1">
                   <Label>验证码</Label>
-                  <Input placeholder="请输入验证码" />
+                  <Input placeholder="请输入验证码" autoComplete="off" />
+                  <FieldError />
                 </TextField>
                 {captcha.img ? (
                   <img
                     src={captcha.img}
-                    alt="验证码"
+                    alt="验证码，点击刷新"
+                    title="点击刷新"
                     className="h-10 cursor-pointer rounded-lg"
                     onClick={refreshCaptcha}
                   />
@@ -91,7 +101,7 @@ export default function LoginPage() {
               <Button type="submit" variant="primary" isPending={submitting}>
                 登 录
               </Button>
-            </form>
+            </Form>
           </CardContent>
         </Card>
       </div>
