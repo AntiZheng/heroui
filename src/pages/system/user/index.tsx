@@ -105,6 +105,12 @@ export default function UserPage() {
     { key: 'actions', label: '操作' },
   ]
 
+  // HeroUI v3 的 Row 子级渲染函数(columnKey)不生效，需静态 Cell；items 需自带 id
+  const rowsWithId = useMemo(
+    () => (data?.rows ?? []).map((r) => ({ ...r, id: r.user_id })),
+    [data],
+  )
+
   const renderCell = (row: SysUserRow, key: string) => {
     switch (key) {
       case 'status':
@@ -186,14 +192,18 @@ export default function UserPage() {
                 ))}
               </TableHeader>
               <TableBody
-                items={data?.rows ?? []}
+                items={rowsWithId}
                 renderEmptyState={() => (isPending ? <Spinner /> : '暂无数据')}
               >
                 {(row) => (
-                  <TableRow id={row.user_id}>
-                    {(columnKey) => (
-                      <TableCell>{renderCell(row, String(columnKey))}</TableCell>
-                    )}
+                  <TableRow>
+                    <TableCell>{renderCell(row, 'user_id')}</TableCell>
+                    <TableCell>{renderCell(row, 'user_name')}</TableCell>
+                    <TableCell>{renderCell(row, 'nick_name')}</TableCell>
+                    <TableCell>{renderCell(row, 'phonenumber')}</TableCell>
+                    <TableCell>{renderCell(row, 'status')}</TableCell>
+                    <TableCell>{renderCell(row, 'create_time')}</TableCell>
+                    <TableCell>{renderCell(row, 'actions')}</TableCell>
                   </TableRow>
                 )}
               </TableBody>
