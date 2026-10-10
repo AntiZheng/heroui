@@ -5,7 +5,6 @@ import {
   Card,
   CardContent,
   Chip,
-  Input,
   Label,
   ListBox,
   ListBoxItem,
@@ -16,6 +15,7 @@ import {
   PaginationNext,
   PaginationPrevious,
   PaginationRoot,
+  SearchField,
   SelectIndicator,
   SelectPopover,
   SelectRoot,
@@ -29,8 +29,8 @@ import {
   TableHeader,
   TableRoot,
   TableRow,
-  TextField,
 } from '@heroui/react'
+import { RotateCcw, Search } from 'lucide-react'
 import { getDeptTree, getUserList } from '../../../api/user'
 import { hasPermission } from '../../../stores/auth'
 import { flattenDeptTree } from './deptTree'
@@ -130,14 +130,36 @@ export default function UserPage() {
     <div className="space-y-6">
       <Card>
         <CardContent className="flex flex-row flex-wrap items-end gap-3">
-          <TextField value={userNameInput} onChange={setUserNameInput} className="w-48">
+          <SearchField
+            aria-label="按账号搜索"
+            variant="secondary"
+            value={userNameInput}
+            onChange={setUserNameInput}
+            onSubmit={search}
+            className="w-48"
+          >
             <Label>账号</Label>
-            <Input />
-          </TextField>
-          <TextField value={phoneInput} onChange={setPhoneInput} className="w-48">
+            <SearchField.Group>
+              <SearchField.SearchIcon />
+              <SearchField.Input placeholder="回车搜索" />
+              <SearchField.ClearButton />
+            </SearchField.Group>
+          </SearchField>
+          <SearchField
+            aria-label="按手机号搜索"
+            variant="secondary"
+            value={phoneInput}
+            onChange={setPhoneInput}
+            onSubmit={search}
+            className="w-48"
+          >
             <Label>手机号</Label>
-            <Input />
-          </TextField>
+            <SearchField.Group>
+              <SearchField.SearchIcon />
+              <SearchField.Input placeholder="回车搜索" />
+              <SearchField.ClearButton />
+            </SearchField.Group>
+          </SearchField>
           <SelectRoot
             aria-label="部门"
             className="w-48"
@@ -149,11 +171,14 @@ export default function UserPage() {
           >
             <Label>部门</Label>
             <SelectTrigger>
-              <SelectValue />
+              <SelectValue>
+                {({ isPlaceholder, defaultChildren }) =>
+                  isPlaceholder ? <span className="text-muted">全部部门</span> : defaultChildren
+                }
+              </SelectValue>
               <SelectIndicator />
             </SelectTrigger>
             <SelectPopover>
-              {/* RAC 的选择键取自 id prop；React key 会被拦截导致 onSelectionChange 收到自动生成的非数字键 */}
               <ListBox>
                 {(deptOptions ?? []).map((dept) => (
                   <ListBoxItem key={String(dept.id)} id={String(dept.id)}>{dept.label}</ListBoxItem>
@@ -162,9 +187,11 @@ export default function UserPage() {
             </SelectPopover>
           </SelectRoot>
           <Button variant="primary" onPress={search}>
+            <Search size={14} aria-hidden />
             搜索
           </Button>
           <Button variant="secondary" onPress={reset}>
+            <RotateCcw size={14} aria-hidden />
             重置
           </Button>
         </CardContent>
