@@ -260,12 +260,10 @@ export default function UserPage() {
         </TableScrollContainer>
         <TableFooter>
           <PaginationRoot size="sm">
-            <div className="flex items-center gap-3">
-              <PaginationSummary>
-                {data?.total
-                  ? `第 ${(query.pageNum - 1) * pageSize + 1} 至 ${Math.min(query.pageNum * pageSize, data.total)} 条，共 ${data.total} 条`
-                  : '共 0 条'}
-              </PaginationSummary>
+            <PaginationSummary>
+              {data?.total
+                ? `第 ${(query.pageNum - 1) * pageSize + 1} 至 ${Math.min(query.pageNum * pageSize, data.total)} 条，共 ${data.total} 条`
+                : '共 0 条'}
               <SelectRoot
                 aria-label="每页条数"
                 className="w-24"
@@ -275,7 +273,7 @@ export default function UserPage() {
                   if (k) setQuery((q) => ({ ...q, pageNum: 1, pageSize: Number(k) }))
                 }}
               >
-                <SelectTrigger className="h-8! min-h-0! items-center! rounded-3xl! border-transparent! bg-transparent! px-2! py-0! text-xs! font-medium! shadow-none! hover:border-transparent! hover:bg-default-hover!">
+                <SelectTrigger className="h-7! min-h-0! items-center! rounded-3xl! border-transparent! bg-transparent! px-2! py-0! text-xs! font-medium! shadow-none! hover:border-transparent! hover:bg-default-hover!">
                   <SelectValue>
                     {({ isPlaceholder, defaultChildren }) =>
                       isPlaceholder ? <span>{pageSize} 条/页</span> : defaultChildren
@@ -291,9 +289,8 @@ export default function UserPage() {
                   </ListBox>
                 </SelectPopover>
               </SelectRoot>
-            </div>
-            <div className="flex items-center gap-3">
-              <PaginationContent>
+            </PaginationSummary>
+            <PaginationContent>
                 <PaginationItem>
                   <PaginationPrevious
                     isDisabled={query.pageNum <= 1}
@@ -328,22 +325,23 @@ export default function UserPage() {
                     <PaginationNextIcon aria-hidden />
                   </PaginationNext>
                 </PaginationItem>
+                <PaginationItem>
+                  <span className="flex items-center gap-1.5 text-xs text-muted">
+                    跳至
+                    <Input
+                      aria-label="跳转页码"
+                      inputMode="numeric"
+                      value={jumpTo}
+                      onChange={(e) => setJumpTo(e.currentTarget.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') jump()
+                      }}
+                      className="h-7! w-12! px-1! py-0! text-center! text-xs!"
+                    />
+                    页
+                  </span>
+                </PaginationItem>
               </PaginationContent>
-              <span className="flex items-center gap-1.5 text-xs text-muted">
-                跳至
-                <Input
-                  aria-label="跳转页码"
-                  inputMode="numeric"
-                  value={jumpTo}
-                  onChange={(e) => setJumpTo(e.currentTarget.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') jump()
-                  }}
-                  className="h-7! w-12! px-1! py-0! text-center! text-xs!"
-                />
-                页
-              </span>
-            </div>
           </PaginationRoot>
         </TableFooter>
       </TableRoot>
