@@ -261,6 +261,11 @@ export default function UserPage() {
         <TableFooter>
           <PaginationRoot size="sm">
             <div className="flex items-center gap-3">
+              <PaginationSummary>
+                {data?.total
+                  ? `第 ${(query.pageNum - 1) * pageSize + 1} 至 ${Math.min(query.pageNum * pageSize, data.total)} 条，共 ${data.total} 条`
+                  : '共 0 条'}
+              </PaginationSummary>
               <SelectRoot
                 aria-label="每页条数"
                 className="w-24"
@@ -270,7 +275,7 @@ export default function UserPage() {
                   if (k) setQuery((q) => ({ ...q, pageNum: 1, pageSize: Number(k) }))
                 }}
               >
-                <SelectTrigger className="h-8 min-h-8 px-2 text-xs">
+                <SelectTrigger className="h-8 min-h-0 rounded-3xl border-transparent bg-transparent px-2 py-0 text-xs font-medium shadow-none hover:border-transparent hover:bg-default-hover">
                   <SelectValue>
                     {({ isPlaceholder, defaultChildren }) =>
                       isPlaceholder ? <span>{pageSize} 条/页</span> : defaultChildren
@@ -286,11 +291,6 @@ export default function UserPage() {
                   </ListBox>
                 </SelectPopover>
               </SelectRoot>
-              <PaginationSummary>
-                {data?.total
-                  ? `第 ${(query.pageNum - 1) * pageSize + 1} 至 ${Math.min(query.pageNum * pageSize, data.total)} 条，共 ${data.total} 条`
-                  : '共 0 条'}
-              </PaginationSummary>
             </div>
             <div className="flex items-center gap-3">
               <PaginationContent>
