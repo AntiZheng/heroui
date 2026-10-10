@@ -47,13 +47,13 @@ export default function HomePage() {
         <Card>
           <CardBody className="gap-1">
             <p className="text-small text-foreground-500">用户总数</p>
-            <p className="text-3xl font-bold">{userTotal ?? '—'}</p>
+            <p className="text-3xl font-bold tabular-nums">{userTotal ?? '—'}</p>
           </CardBody>
         </Card>
         <Card>
           <CardBody className="gap-1">
             <p className="text-small text-foreground-500">内存使用</p>
-            <p className="text-3xl font-bold">{server ? `${server.memory.usage}%` : '—'}</p>
+            <p className="text-3xl font-bold tabular-nums">{server ? `${server.memory.usage}%` : '—'}</p>
             {server && (
               <Progress
                 size="sm"
@@ -67,7 +67,7 @@ export default function HomePage() {
         <Card>
           <CardBody className="gap-1">
             <p className="text-small text-foreground-500">磁盘使用</p>
-            <p className="text-3xl font-bold">{server ? `${server.disk.usage}%` : '—'}</p>
+            <p className="text-3xl font-bold tabular-nums">{server ? `${server.disk.usage}%` : '—'}</p>
             {server && (
               <Progress
                 size="sm"
@@ -82,7 +82,7 @@ export default function HomePage() {
 
       {server && (
         <Card>
-          <CardBody className="flex flex-row flex-wrap gap-8">
+          <CardBody className="flex flex-row flex-wrap gap-6">
             <div>
               <p className="text-small text-foreground-500">CPU 核心 / 使用率</p>
               <p className="font-medium">

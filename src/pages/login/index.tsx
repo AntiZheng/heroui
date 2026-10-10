@@ -51,14 +51,16 @@ export default function LoginPage() {
 
   return (
     <div className="flex h-screen">
-      <div className="hidden flex-1 flex-col items-center justify-center bg-primary lg:flex">
-        <h1 className="text-4xl font-bold text-primary-foreground">Admin 管理平台</h1>
-        <p className="mt-4 text-primary-foreground/80">HeroUI × FastAPI 最小验证版</p>
+      <div className="relative hidden flex-1 flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-primary to-secondary lg:flex">
+        <div className="absolute -left-24 -top-24 h-96 w-96 rounded-full bg-white/10 blur-2xl" aria-hidden />
+        <div className="absolute -bottom-32 -right-16 h-[28rem] w-[28rem] rounded-full bg-white/10 blur-3xl" aria-hidden />
+        <h1 className="relative text-4xl font-bold text-primary-foreground">Admin 管理平台</h1>
+        <p className="relative mt-4 text-primary-foreground/80">HeroUI × FastAPI 最小验证版</p>
       </div>
       <div className="flex flex-1 items-center justify-center">
         <Card className="w-full max-w-sm">
           <CardBody className="gap-4 p-8">
-            <h2 className="text-xl font-semibold">欢迎回来</h2>
+            <h2 className="text-2xl font-semibold">欢迎回来</h2>
             <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
               <Input
                 label="账号"

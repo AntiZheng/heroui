@@ -1,11 +1,12 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Avatar, Tooltip } from '@heroui/react'
+import { Home, LogOut, Users } from 'lucide-react'
 import { useAuthStore } from '../../stores/auth'
 import { logout } from '../../api/auth'
 
 const navItems = [
-  { path: '/', label: '首页' },
-  { path: '/system/user', label: '用户管理' },
+  { path: '/', label: '首页', icon: Home },
+  { path: '/system/user', label: '用户管理', icon: Users },
 ]
 
 export default function AppShell() {
@@ -27,20 +28,22 @@ export default function AppShell() {
   return (
     <div className="flex h-screen bg-background">
       <aside className="flex w-56 flex-col border-r border-divider bg-content1">
-        <div className="flex h-16 items-center px-5 text-lg font-bold">Admin 平台</div>
+        <div className="flex h-16 items-center px-5 text-lg font-semibold">Admin 平台</div>
         <nav className="flex-1 space-y-1 px-3">
           {navItems.map((item) => {
             const active = location.pathname === item.path
+            const Icon = item.icon
             return (
               <button
                 key={item.path}
                 onClick={() => navigate(item.path)}
-                className={`w-full rounded-medium px-4 py-2.5 text-left text-small transition-colors ${
+                className={`flex w-full cursor-pointer items-center gap-3 rounded-medium px-4 py-2.5 text-left text-small transition-colors ${
                   active
                     ? 'bg-primary/15 font-medium text-primary'
                     : 'text-foreground-600 hover:bg-default-100'
                 }`}
               >
+                <Icon size={16} aria-hidden />
                 {item.label}
               </button>
             )
@@ -55,7 +58,11 @@ export default function AppShell() {
             className="cursor-pointer"
           />
           <Tooltip content="退出登录">
-            <button onClick={handleLogout} className="text-small text-foreground-500 hover:text-danger">
+            <button
+              onClick={handleLogout}
+              className="flex cursor-pointer items-center gap-1.5 text-small text-foreground-500 transition-colors hover:text-danger"
+            >
+              <LogOut size={14} aria-hidden />
               退出
             </button>
           </Tooltip>

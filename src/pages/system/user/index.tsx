@@ -94,7 +94,7 @@ export default function UserPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <Card>
         <CardBody className="flex flex-row flex-wrap items-end gap-3">
           <Input
@@ -134,7 +134,7 @@ export default function UserPage() {
       <Card>
         <CardBody className="gap-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-medium font-medium">用户列表</h2>
+            <h2 className="text-medium font-semibold">用户列表</h2>
             <div className="flex items-center gap-3">
               <span className="text-small text-foreground-500">共 {data?.total ?? 0} 条</span>
               {hasPermission('system:user:add') && (
