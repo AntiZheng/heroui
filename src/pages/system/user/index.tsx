@@ -260,11 +260,38 @@ export default function UserPage() {
         </TableScrollContainer>
         <TableFooter>
           <PaginationRoot size="sm">
-            <PaginationSummary>
-              {data?.total
-                ? `第 ${(query.pageNum - 1) * pageSize + 1} 至 ${Math.min(query.pageNum * pageSize, data.total)} 条，共 ${data.total} 条`
-                : '共 0 条'}
-            </PaginationSummary>
+            <div className="flex items-center gap-3">
+              <SelectRoot
+                aria-label="每页条数"
+                className="w-24"
+                selectedKey={String(pageSize)}
+                onSelectionChange={(key) => {
+                  const k = key as string | null
+                  if (k) setQuery((q) => ({ ...q, pageNum: 1, pageSize: Number(k) }))
+                }}
+              >
+                <SelectTrigger className="h-8 min-h-8 px-2 text-xs">
+                  <SelectValue>
+                    {({ isPlaceholder, defaultChildren }) =>
+                      isPlaceholder ? <span>{pageSize} 条/页</span> : defaultChildren
+                    }
+                  </SelectValue>
+                  <SelectIndicator />
+                </SelectTrigger>
+                <SelectPopover>
+                  <ListBox>
+                    {[10, 20, 50].map((n) => (
+                      <ListBoxItem key={String(n)} id={String(n)}>{n} 条/页</ListBoxItem>
+                    ))}
+                  </ListBox>
+                </SelectPopover>
+              </SelectRoot>
+              <PaginationSummary>
+                {data?.total
+                  ? `第 ${(query.pageNum - 1) * pageSize + 1} 至 ${Math.min(query.pageNum * pageSize, data.total)} 条，共 ${data.total} 条`
+                  : '共 0 条'}
+              </PaginationSummary>
+            </div>
             <div className="flex items-center gap-3">
               <PaginationContent>
                 <PaginationItem>
@@ -302,32 +329,7 @@ export default function UserPage() {
                   </PaginationNext>
                 </PaginationItem>
               </PaginationContent>
-              <SelectRoot
-                aria-label="每页条数"
-                className="w-28"
-                selectedKey={String(pageSize)}
-                onSelectionChange={(key) => {
-                  const k = key as string | null
-                  if (k) setQuery((q) => ({ ...q, pageNum: 1, pageSize: Number(k) }))
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue>
-                    {({ isPlaceholder, defaultChildren }) =>
-                      isPlaceholder ? <span>{pageSize} 条/页</span> : defaultChildren
-                    }
-                  </SelectValue>
-                  <SelectIndicator />
-                </SelectTrigger>
-                <SelectPopover>
-                  <ListBox>
-                    {[10, 20, 50].map((n) => (
-                      <ListBoxItem key={String(n)} id={String(n)}>{n} 条/页</ListBoxItem>
-                    ))}
-                  </ListBox>
-                </SelectPopover>
-              </SelectRoot>
-              <span className="flex items-center gap-1.5 text-sm text-muted">
+              <span className="flex items-center gap-1.5 text-xs text-muted">
                 跳至
                 <Input
                   aria-label="跳转页码"
@@ -337,7 +339,7 @@ export default function UserPage() {
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') jump()
                   }}
-                  className="w-14 px-2 text-center"
+                  className="h-8 w-12 px-1.5 py-0 text-center text-xs"
                 />
                 页
               </span>
