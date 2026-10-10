@@ -5,6 +5,7 @@ import {
   Card,
   CardContent,
   Chip,
+  EmptyState,
   Label,
   ListBox,
   ListBoxItem,
@@ -26,11 +27,13 @@ import {
   TableCell,
   TableColumn,
   TableContent,
+  TableFooter,
   TableHeader,
   TableRoot,
   TableRow,
+  TableScrollContainer,
 } from '@heroui/react'
-import { RotateCcw, Search } from 'lucide-react'
+import { RotateCcw, Search, Users } from 'lucide-react'
 import { getDeptTree, getUserList } from '../../../api/user'
 import { hasPermission } from '../../../stores/auth'
 import { flattenDeptTree } from './deptTree'
@@ -201,80 +204,89 @@ export default function UserPage() {
         <CardContent className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold">用户列表</h2>
-            <div className="flex items-center gap-3">
+            {hasPermission('system:user:add') && (
+              <Button variant="primary" onPress={openCreate}>
+                新增用户
+              </Button>
+            )}
+          </div>
+          <TableRoot variant="secondary">
+            <TableScrollContainer>
+              <TableContent aria-label="用户列表" className="min-w-[720px]">
+                <TableHeader>
+                  {columns.map((col) => (
+                    <TableColumn key={col.key} isRowHeader={col.key === 'user_name'}>
+                      {col.label}
+                    </TableColumn>
+                  ))}
+                </TableHeader>
+                <TableBody
+                  items={rowsWithId}
+                  renderEmptyState={() =>
+                    isPending ? (
+                      <Spinner />
+                    ) : (
+                      <EmptyState className="flex flex-col items-center justify-center gap-2 py-8">
+                        <Users size={20} aria-hidden className="text-muted" />
+                        <span className="text-sm text-muted">暂无数据</span>
+                      </EmptyState>
+                    )
+                  }
+                >
+                  {(row) => (
+                    <TableRow>
+                      <TableCell>{renderCell(row, 'user_id')}</TableCell>
+                      <TableCell>{renderCell(row, 'user_name')}</TableCell>
+                      <TableCell>{renderCell(row, 'nick_name')}</TableCell>
+                      <TableCell>{renderCell(row, 'phonenumber')}</TableCell>
+                      <TableCell>{renderCell(row, 'status')}</TableCell>
+                      <TableCell>{renderCell(row, 'create_time')}</TableCell>
+                      <TableCell>{renderCell(row, 'actions')}</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </TableContent>
+            </TableScrollContainer>
+            <TableFooter className="flex items-center justify-between pt-3">
               <span className="text-sm text-muted">共 {data?.total ?? 0} 条</span>
-              {hasPermission('system:user:add') && (
-                <Button variant="primary" onPress={openCreate}>
-                  新增用户
-                </Button>
-              )}
-            </div>
-          </div>
-          <TableRoot>
-            <TableContent aria-label="用户列表">
-              <TableHeader>
-                {columns.map((col) => (
-                  <TableColumn key={col.key} isRowHeader={col.key === 'user_name'}>
-                    {col.label}
-                  </TableColumn>
-                ))}
-              </TableHeader>
-              <TableBody
-                items={rowsWithId}
-                renderEmptyState={() => (isPending ? <Spinner /> : '暂无数据')}
-              >
-                {(row) => (
-                  <TableRow>
-                    <TableCell>{renderCell(row, 'user_id')}</TableCell>
-                    <TableCell>{renderCell(row, 'user_name')}</TableCell>
-                    <TableCell>{renderCell(row, 'nick_name')}</TableCell>
-                    <TableCell>{renderCell(row, 'phonenumber')}</TableCell>
-                    <TableCell>{renderCell(row, 'status')}</TableCell>
-                    <TableCell>{renderCell(row, 'create_time')}</TableCell>
-                    <TableCell>{renderCell(row, 'actions')}</TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </TableContent>
+              <PaginationRoot size="sm">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      isDisabled={query.pageNum <= 1}
+                      onPress={() => setQuery((q) => ({ ...q, pageNum: q.pageNum - 1 }))}
+                    >
+                      上一页
+                    </PaginationPrevious>
+                  </PaginationItem>
+                  {pageWindow(totalPages, query.pageNum).map((p, i) =>
+                    p === '…' ? (
+                      <PaginationItem key={`ellipsis-${i}`}>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    ) : (
+                      <PaginationItem key={p}>
+                        <PaginationLink
+                          isActive={p === query.pageNum}
+                          onPress={() => setQuery((q) => ({ ...q, pageNum: p }))}
+                        >
+                          {p}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ),
+                  )}
+                  <PaginationItem>
+                    <PaginationNext
+                      isDisabled={query.pageNum >= totalPages}
+                      onPress={() => setQuery((q) => ({ ...q, pageNum: q.pageNum + 1 }))}
+                    >
+                      下一页
+                    </PaginationNext>
+                  </PaginationItem>
+                </PaginationContent>
+              </PaginationRoot>
+            </TableFooter>
           </TableRoot>
-          <div className="flex justify-center">
-            <PaginationRoot>
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    isDisabled={query.pageNum <= 1}
-                    onPress={() => setQuery((q) => ({ ...q, pageNum: q.pageNum - 1 }))}
-                  >
-                    上一页
-                  </PaginationPrevious>
-                </PaginationItem>
-                {pageWindow(totalPages, query.pageNum).map((p, i) =>
-                  p === '…' ? (
-                    <PaginationItem key={`ellipsis-${i}`}>
-                      <PaginationEllipsis />
-                    </PaginationItem>
-                  ) : (
-                    <PaginationItem key={p}>
-                      <PaginationLink
-                        isActive={p === query.pageNum}
-                        onPress={() => setQuery((q) => ({ ...q, pageNum: p }))}
-                      >
-                        {p}
-                      </PaginationLink>
-                    </PaginationItem>
-                  ),
-                )}
-                <PaginationItem>
-                  <PaginationNext
-                    isDisabled={query.pageNum >= totalPages}
-                    onPress={() => setQuery((q) => ({ ...q, pageNum: q.pageNum + 1 }))}
-                  >
-                    下一页
-                  </PaginationNext>
-                </PaginationItem>
-              </PaginationContent>
-            </PaginationRoot>
-          </div>
         </CardContent>
       </Card>
 
