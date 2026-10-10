@@ -153,9 +153,10 @@ export default function UserPage() {
               <SelectIndicator />
             </SelectTrigger>
             <SelectPopover>
+              {/* RAC 的选择键取自 id prop；React key 会被拦截导致 onSelectionChange 收到自动生成的非数字键 */}
               <ListBox>
                 {(deptOptions ?? []).map((dept) => (
-                  <ListBoxItem key={String(dept.id)}>{dept.label}</ListBoxItem>
+                  <ListBoxItem key={String(dept.id)} id={String(dept.id)}>{dept.label}</ListBoxItem>
                 ))}
               </ListBox>
             </SelectPopover>

@@ -159,7 +159,7 @@ export default function UserFormModal({ isOpen, editing, onClose }: Props) {
                   <SelectPopover>
                     <ListBox>
                       {deptOptions.map((dept) => (
-                        <ListBoxItem key={String(dept.id)}>{dept.label}</ListBoxItem>
+                        <ListBoxItem key={String(dept.id)} id={String(dept.id)}>{dept.label}</ListBoxItem>
                       ))}
                     </ListBox>
                   </SelectPopover>
