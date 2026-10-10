@@ -1,2 +1,5 @@
 @import 'tailwindcss';
 @import '@heroui/styles';
+
+/* HeroUI v3 暗色主题由根节点 .dark 类驱动；把 Tailwind 的 dark: 变体也绑到类策略保持一致 */
+@custom-variant dark (&:where(.dark, .dark *));

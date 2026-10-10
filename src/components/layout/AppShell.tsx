@@ -1,7 +1,8 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@heroui/react'
-import { Home, LogOut, Users } from 'lucide-react'
+import { Home, LogOut, Moon, Sun, Users } from 'lucide-react'
 import { useAuthStore } from '../../stores/auth'
+import { useThemeStore } from '../../stores/theme'
 import { logout } from '../../api/auth'
 
 const navItems = [
@@ -14,6 +15,8 @@ export default function AppShell() {
   const location = useLocation()
   const user = useAuthStore((s) => s.user)
   const clear = useAuthStore((s) => s.clear)
+  const theme = useThemeStore((s) => s.theme)
+  const toggleTheme = useThemeStore((s) => s.toggle)
 
   const handleLogout = async () => {
     try {
@@ -52,6 +55,18 @@ export default function AppShell() {
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-16 items-center justify-end gap-3 border-b border-separator bg-surface px-6">
+          <Tooltip>
+            <TooltipTrigger>
+              <button
+                onClick={toggleTheme}
+                aria-label={theme === 'dark' ? '切换亮色模式' : '切换暗色模式'}
+                className="flex size-8 cursor-pointer items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-secondary hover:text-foreground"
+              >
+                {theme === 'dark' ? <Sun size={16} aria-hidden /> : <Moon size={16} aria-hidden />}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{theme === 'dark' ? '切换亮色模式' : '切换暗色模式'}</TooltipContent>
+          </Tooltip>
           <span className="flex size-8 cursor-pointer items-center justify-center rounded-full bg-accent text-sm font-medium text-accent-foreground">
             {user?.nick_name?.slice(0, 1) ?? 'A'}
           </span>
