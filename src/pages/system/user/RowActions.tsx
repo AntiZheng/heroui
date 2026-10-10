@@ -3,14 +3,24 @@ import { useQueryClient } from '@tanstack/react-query'
 import {
   Button,
   Input,
-  Modal,
+  Label,
+  ModalBackdrop,
   ModalBody,
-  ModalContent,
+  ModalContainer,
+  ModalDialog,
   ModalFooter,
   ModalHeader,
+  ModalRoot,
   Switch,
+  SwitchContent,
+  SwitchControl,
+  SwitchThumb,
+  TextField,
   Tooltip,
-  addToast,
+  TooltipContent,
+  TooltipTrigger,
+  toast,
+  useOverlayState,
 } from '@heroui/react'
 import { changeStatus, deleteUsers, resetPwd } from '../../../api/user'
 import { hasPermission } from '../../../stores/auth'
@@ -24,7 +34,7 @@ interface Props {
 export default function RowActions({ row, onEdit }: Props) {
   const queryClient = useQueryClient()
   const [status, setStatus] = useState(row.status)
-  const [resetOpen, setResetOpen] = useState(false)
+  const resetState = useOverlayState()
   const [newPwd, setNewPwd] = useState('')
 
   const invalidate = () => {
@@ -39,7 +49,7 @@ export default function RowActions({ row, onEdit }: Props) {
     } catch {
       return
     }
-    addToast({ title: '成功', description: '删除成功', color: 'success' })
+    toast('成功', { description: '删除成功', variant: 'success' })
     invalidate()
   }
 
@@ -48,7 +58,7 @@ export default function RowActions({ row, onEdit }: Props) {
     try {
       await changeStatus(row, next)
       setStatus(next)
-      addToast({ title: '成功', description: '状态修改成功', color: 'success' })
+      toast('成功', { description: '状态修改成功', variant: 'success' })
     } catch {
       // 失败保持原状态
     }
@@ -56,7 +66,7 @@ export default function RowActions({ row, onEdit }: Props) {
 
   const handleResetPwd = async () => {
     if (!newPwd) {
-      addToast({ title: '提示', description: '请输入新密码', color: 'warning' })
+      toast('提示', { description: '请输入新密码', variant: 'warning' })
       return
     }
     try {
@@ -64,54 +74,68 @@ export default function RowActions({ row, onEdit }: Props) {
     } catch {
       return
     }
-    addToast({ title: '成功', description: '密码已重置', color: 'success' })
-    setResetOpen(false)
+    toast('成功', { description: '密码已重置', variant: 'success' })
+    resetState.close()
     setNewPwd('')
   }
 
   return (
     <div className="flex items-center gap-2">
-      <Switch size="sm" isSelected={status === '0'} onValueChange={handleStatusToggle} aria-label="启用状态" />
+      <Switch isSelected={status === '0'} onChange={handleStatusToggle} aria-label="启用状态">
+        <SwitchContent>
+          <SwitchControl>
+            <SwitchThumb />
+          </SwitchControl>
+        </SwitchContent>
+      </Switch>
       {hasPermission('system:user:edit') && (
-        <Tooltip content="编辑">
-          <Button size="sm" variant="light" onPress={() => onEdit(row)}>
-            编辑
-          </Button>
+        <Tooltip>
+          <TooltipTrigger>
+            <Button size="sm" variant="ghost" onPress={() => onEdit(row)}>
+              编辑
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>编辑</TooltipContent>
         </Tooltip>
       )}
       {hasPermission('system:user:resetPwd') && (
-        <Tooltip content="重置密码">
-          <Button size="sm" variant="light" onPress={() => setResetOpen(true)}>
-            重置密码
-          </Button>
+        <Tooltip>
+          <TooltipTrigger>
+            <Button size="sm" variant="ghost" onPress={resetState.open}>
+              重置密码
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>重置密码</TooltipContent>
         </Tooltip>
       )}
       {hasPermission('system:user:remove') && (
-        <Button size="sm" variant="light" color="danger" onPress={handleDelete}>
+        <Button size="sm" variant="danger-soft" onPress={handleDelete}>
           删除
         </Button>
       )}
-      <Modal isOpen={resetOpen} onClose={() => setResetOpen(false)} size="sm">
-        <ModalContent>
-          <ModalHeader>重置密码 — {row.user_name}</ModalHeader>
-          <ModalBody>
-            <Input
-              label="新密码"
-              type="password"
-              value={newPwd}
-              onValueChange={setNewPwd}
-            />
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="flat" onPress={() => setResetOpen(false)}>
-              取消
-            </Button>
-            <Button color="primary" onPress={handleResetPwd}>
-              确认重置
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+      <ModalRoot state={resetState}>
+        <ModalBackdrop>
+          <ModalContainer size="sm">
+            <ModalDialog>
+              <ModalHeader>重置密码 — {row.user_name}</ModalHeader>
+              <ModalBody>
+                <TextField value={newPwd} onChange={setNewPwd}>
+                  <Label>新密码</Label>
+                  <Input type="password" />
+                </TextField>
+              </ModalBody>
+              <ModalFooter>
+                <Button variant="secondary" onPress={resetState.close}>
+                  取消
+                </Button>
+                <Button variant="primary" onPress={handleResetPwd}>
+                  确认重置
+                </Button>
+              </ModalFooter>
+            </ModalDialog>
+          </ModalContainer>
+        </ModalBackdrop>
+      </ModalRoot>
     </div>
   )
 }

@@ -3,18 +3,33 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import {
   Button,
   Card,
-  CardBody,
+  CardContent,
   Chip,
   Input,
-  Pagination,
-  Select,
-  SelectItem,
-  Table,
+  Label,
+  ListBox,
+  ListBoxItem,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationRoot,
+  SelectIndicator,
+  SelectPopover,
+  SelectRoot,
+  SelectTrigger,
+  SelectValue,
+  Spinner,
   TableBody,
   TableCell,
   TableColumn,
+  TableContent,
   TableHeader,
+  TableRoot,
   TableRow,
+  TextField,
 } from '@heroui/react'
 import { getDeptTree, getUserList } from '../../../api/user'
 import { hasPermission } from '../../../stores/auth'
@@ -25,6 +40,18 @@ import type { UserListQuery } from '../../../api/user'
 import type { SysUserRow } from '../../../types/user'
 
 const PAGE_SIZE = 10
+
+function pageWindow(total: number, current: number): (number | '…')[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+  const pages: (number | '…')[] = [1]
+  const start = Math.max(2, current - 1)
+  const end = Math.min(total - 1, current + 1)
+  if (start > 2) pages.push('…')
+  for (let i = start; i <= end; i++) pages.push(i)
+  if (end < total - 1) pages.push('…')
+  pages.push(total)
+  return pages
+}
 
 export default function UserPage() {
   const [query, setQuery] = useState<UserListQuery>({ pageNum: 1, pageSize: PAGE_SIZE })
@@ -82,7 +109,7 @@ export default function UserPage() {
     switch (key) {
       case 'status':
         return (
-          <Chip color={row.status === '0' ? 'success' : 'default'} size="sm" variant="flat">
+          <Chip color={row.status === '0' ? 'success' : 'default'} size="sm">
             {row.status === '0' ? '正常' : '停用'}
           </Chip>
         )
@@ -96,78 +123,121 @@ export default function UserPage() {
   return (
     <div className="space-y-6">
       <Card>
-        <CardBody className="flex flex-row flex-wrap items-end gap-3">
-          <Input
-            label="账号"
-            value={userNameInput}
-            onValueChange={setUserNameInput}
+        <CardContent className="flex flex-row flex-wrap items-end gap-3">
+          <TextField value={userNameInput} onChange={setUserNameInput} className="w-48">
+            <Label>账号</Label>
+            <Input />
+          </TextField>
+          <TextField value={phoneInput} onChange={setPhoneInput} className="w-48">
+            <Label>手机号</Label>
+            <Input />
+          </TextField>
+          <SelectRoot
+            aria-label="部门"
             className="w-48"
-          />
-          <Input
-            label="手机号"
-            value={phoneInput}
-            onValueChange={setPhoneInput}
-            className="w-48"
-          />
-          <Select
-            label="部门"
-            className="w-48"
-            selectedKeys={query.deptId ? [String(query.deptId)] : []}
-            onSelectionChange={(keys) => {
-              const key = Array.from(keys)[0] as string | undefined
-              setQuery((q) => ({ ...q, pageNum: 1, deptId: key ? Number(key) : undefined }))
+            selectedKey={query.deptId ? String(query.deptId) : null}
+            onSelectionChange={(key) => {
+              const k = key as string | null
+              setQuery((q) => ({ ...q, pageNum: 1, deptId: k ? Number(k) : undefined }))
             }}
           >
-            {(deptOptions ?? []).map((dept) => (
-              <SelectItem key={String(dept.id)}>{dept.label}</SelectItem>
-            ))}
-          </Select>
-          <Button color="primary" onPress={search}>
+            <Label>部门</Label>
+            <SelectTrigger>
+              <SelectValue />
+              <SelectIndicator />
+            </SelectTrigger>
+            <SelectPopover>
+              <ListBox>
+                {(deptOptions ?? []).map((dept) => (
+                  <ListBoxItem key={String(dept.id)}>{dept.label}</ListBoxItem>
+                ))}
+              </ListBox>
+            </SelectPopover>
+          </SelectRoot>
+          <Button variant="primary" onPress={search}>
             搜索
           </Button>
-          <Button variant="flat" onPress={reset}>
+          <Button variant="secondary" onPress={reset}>
             重置
           </Button>
-        </CardBody>
+        </CardContent>
       </Card>
 
       <Card>
-        <CardBody className="gap-4">
+        <CardContent className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-medium font-semibold">用户列表</h2>
+            <h2 className="text-base font-semibold">用户列表</h2>
             <div className="flex items-center gap-3">
-              <span className="text-small text-foreground-500">共 {data?.total ?? 0} 条</span>
+              <span className="text-sm text-muted">共 {data?.total ?? 0} 条</span>
               {hasPermission('system:user:add') && (
-                <Button color="primary" onPress={openCreate}>
+                <Button variant="primary" onPress={openCreate}>
                   新增用户
                 </Button>
               )}
             </div>
           </div>
-          <Table aria-label="用户列表" isStriped>
-            <TableHeader columns={columns}>
-              {(column) => <TableColumn key={column.key}>{column.label}</TableColumn>}
-            </TableHeader>
-            <TableBody
-              items={data?.rows ?? []}
-              emptyContent="暂无数据"
-              isLoading={isPending}
-            >
-              {(row) => (
-                <TableRow key={row.user_id}>
-                  {(columnKey) => <TableCell>{renderCell(row, String(columnKey))}</TableCell>}
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+          <TableRoot>
+            <TableContent aria-label="用户列表">
+              <TableHeader>
+                {columns.map((col) => (
+                  <TableColumn key={col.key} isRowHeader={col.key === 'user_name'}>
+                    {col.label}
+                  </TableColumn>
+                ))}
+              </TableHeader>
+              <TableBody
+                items={data?.rows ?? []}
+                renderEmptyState={() => (isPending ? <Spinner /> : '暂无数据')}
+              >
+                {(row) => (
+                  <TableRow id={row.user_id}>
+                    {(columnKey) => (
+                      <TableCell>{renderCell(row, String(columnKey))}</TableCell>
+                    )}
+                  </TableRow>
+                )}
+              </TableBody>
+            </TableContent>
+          </TableRoot>
           <div className="flex justify-center">
-            <Pagination
-              total={totalPages}
-              page={query.pageNum}
-              onChange={(page) => setQuery((q) => ({ ...q, pageNum: page }))}
-            />
+            <PaginationRoot>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    isDisabled={query.pageNum <= 1}
+                    onPress={() => setQuery((q) => ({ ...q, pageNum: q.pageNum - 1 }))}
+                  >
+                    上一页
+                  </PaginationPrevious>
+                </PaginationItem>
+                {pageWindow(totalPages, query.pageNum).map((p, i) =>
+                  p === '…' ? (
+                    <PaginationItem key={`ellipsis-${i}`}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  ) : (
+                    <PaginationItem key={p}>
+                      <PaginationLink
+                        isActive={p === query.pageNum}
+                        onPress={() => setQuery((q) => ({ ...q, pageNum: p }))}
+                      >
+                        {p}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ),
+                )}
+                <PaginationItem>
+                  <PaginationNext
+                    isDisabled={query.pageNum >= totalPages}
+                    onPress={() => setQuery((q) => ({ ...q, pageNum: q.pageNum + 1 }))}
+                  >
+                    下一页
+                  </PaginationNext>
+                </PaginationItem>
+              </PaginationContent>
+            </PaginationRoot>
           </div>
-        </CardBody>
+        </CardContent>
       </Card>
 
       <UserFormModal isOpen={formOpen} editing={editing} onClose={() => setFormOpen(false)} />

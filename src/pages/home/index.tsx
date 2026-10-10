@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Card, CardBody, Progress } from '@heroui/react'
+import { Card, CardContent, ProgressBar, ProgressBarFill, ProgressBarTrack } from '@heroui/react'
 import { getUserList } from '../../api/user'
 import request from '../../api/request'
 import { useAuthStore } from '../../stores/auth'
@@ -40,66 +40,68 @@ export default function HomePage() {
         <h1 className="text-2xl font-semibold">
           {greeting()}，{nickName ?? '管理员'}
         </h1>
-        <p className="mt-1 text-small text-foreground-500">欢迎使用 Admin 管理平台</p>
+        <p className="mt-1 text-sm text-muted">欢迎使用 Admin 管理平台</p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Card>
-          <CardBody className="gap-1">
-            <p className="text-small text-foreground-500">用户总数</p>
+          <CardContent className="flex flex-col gap-1">
+            <p className="text-sm text-muted">用户总数</p>
             <p className="text-3xl font-bold tabular-nums">{userTotal ?? '—'}</p>
-          </CardBody>
+          </CardContent>
         </Card>
         <Card>
-          <CardBody className="gap-1">
-            <p className="text-small text-foreground-500">内存使用</p>
+          <CardContent className="flex flex-col gap-1">
+            <p className="text-sm text-muted">内存使用</p>
             <p className="text-3xl font-bold tabular-nums">{server ? `${server.memory.usage}%` : '—'}</p>
             {server && (
-              <Progress
-                size="sm"
-                value={server.memory.usage}
-                color={usageColor(server.memory.usage)}
-                aria-label="内存使用率"
-              />
+              <ProgressBar aria-label="内存使用率" value={server.memory.usage}>
+                {({ percentage }) => (
+                  <ProgressBarTrack>
+                    <ProgressBarFill color={usageColor(server.memory.usage)} style={{ width: `${percentage}%` }} />
+                  </ProgressBarTrack>
+                )}
+              </ProgressBar>
             )}
-          </CardBody>
+          </CardContent>
         </Card>
         <Card>
-          <CardBody className="gap-1">
-            <p className="text-small text-foreground-500">磁盘使用</p>
+          <CardContent className="flex flex-col gap-1">
+            <p className="text-sm text-muted">磁盘使用</p>
             <p className="text-3xl font-bold tabular-nums">{server ? `${server.disk.usage}%` : '—'}</p>
             {server && (
-              <Progress
-                size="sm"
-                value={server.disk.usage}
-                color={usageColor(server.disk.usage)}
-                aria-label="磁盘使用率"
-              />
+              <ProgressBar aria-label="磁盘使用率" value={server.disk.usage}>
+                {({ percentage }) => (
+                  <ProgressBarTrack>
+                    <ProgressBarFill color={usageColor(server.disk.usage)} style={{ width: `${percentage}%` }} />
+                  </ProgressBarTrack>
+                )}
+              </ProgressBar>
             )}
-          </CardBody>
+          </CardContent>
         </Card>
       </div>
 
       {server && (
         <Card>
-          <CardBody className="flex flex-row flex-wrap gap-6">
+          <CardContent className="flex flex-row flex-wrap gap-6">
             <div>
-              <p className="text-small text-foreground-500">CPU 核心 / 使用率</p>
+              <p className="text-sm text-muted">CPU 核心 / 使用率</p>
               <p className="font-medium">
                 {server.cpu.cpuNum} 核 · {server.cpu.cpuUsed}%
               </p>
             </div>
             <div>
-              <p className="text-small text-foreground-500">内存</p>
+              <p className="text-sm text-muted">内存</p>
               <p className="font-medium">
                 {server.memory.used}G / {server.memory.total}G
               </p>
             </div>
             <div>
-              <p className="text-small text-foreground-500">Python 版本</p>
+              <p className="text-sm text-muted">Python 版本</p>
               <p className="font-medium">{server.python.version}</p>
             </div>
-          </CardBody>
+          </CardContent>
         </Card>
       )}
     </div>

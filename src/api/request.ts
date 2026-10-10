@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosHeaders, type AxiosRequestConfig } from 'axios'
-import { addToast } from '@heroui/react'
+import { toast } from '@heroui/react'
 import { useAuthStore } from '../stores/auth'
 
 declare module 'axios' {
@@ -17,7 +17,7 @@ request.interceptors.request.use((config) => {
 })
 
 function fail(msg: string, silent?: boolean): never {
-  if (!silent) addToast({ title: '操作失败', description: msg, color: 'danger' })
+  if (!silent) toast('操作失败', { description: msg, variant: 'danger' })
   throw new Error(msg)
 }
 

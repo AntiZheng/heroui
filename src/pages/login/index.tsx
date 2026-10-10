@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button, Card, CardBody, Input, addToast } from '@heroui/react'
+import { Button, Card, CardContent, Input, Label, TextField, toast } from '@heroui/react'
 import { getCaptcha, login, getInfo } from '../../api/auth'
 import { useAuthStore } from '../../stores/auth'
 
@@ -31,7 +31,7 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!username || !password || !code) {
-      addToast({ title: '提示', description: '请填写完整登录信息', color: 'warning' })
+      toast('提示', { description: '请填写完整登录信息', variant: 'warning' })
       return
     }
     setSubmitting(true)
@@ -51,58 +51,48 @@ export default function LoginPage() {
 
   return (
     <div className="flex h-screen">
-      <div className="relative hidden flex-1 flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-primary to-secondary lg:flex">
-        <div className="absolute -left-24 -top-24 h-96 w-96 rounded-full bg-white/10 blur-2xl" aria-hidden />
+      <div className="relative hidden flex-1 flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-accent via-accent/90 to-accent/70 lg:flex">
+        <div className="absolute -left-24 -top-24 size-96 rounded-full bg-white/10 blur-2xl" aria-hidden />
         <div className="absolute -bottom-32 -right-16 h-[28rem] w-[28rem] rounded-full bg-white/10 blur-3xl" aria-hidden />
-        <h1 className="relative text-4xl font-bold text-primary-foreground">Admin 管理平台</h1>
-        <p className="relative mt-4 text-primary-foreground/80">HeroUI × FastAPI 最小验证版</p>
+        <h1 className="relative text-4xl font-bold text-accent-foreground">Admin 管理平台</h1>
+        <p className="relative mt-4 text-accent-foreground/80">HeroUI × FastAPI 最小验证版</p>
       </div>
       <div className="flex flex-1 items-center justify-center">
         <Card className="w-full max-w-sm">
-          <CardBody className="gap-4 p-8">
+          <CardContent className="flex flex-col gap-4 p-8">
             <h2 className="text-2xl font-semibold">欢迎回来</h2>
             <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-              <Input
-                label="账号"
-                value={username}
-                onValueChange={setUsername}
-                isRequired
-                placeholder="请输入账号"
-              />
-              <Input
-                label="密码"
-                type="password"
-                value={password}
-                onValueChange={setPassword}
-                isRequired
-                placeholder="请输入密码"
-              />
+              <TextField value={username} onChange={setUsername} isRequired>
+                <Label>账号</Label>
+                <Input placeholder="请输入账号" />
+              </TextField>
+              <TextField value={password} onChange={setPassword} isRequired>
+                <Label>密码</Label>
+                <Input type="password" placeholder="请输入密码" />
+              </TextField>
               <div className="flex items-end gap-2">
-                <Input
-                  label="验证码"
-                  value={code}
-                  onValueChange={setCode}
-                  isRequired
-                  className="flex-1"
-                />
+                <TextField value={code} onChange={setCode} isRequired className="flex-1">
+                  <Label>验证码</Label>
+                  <Input placeholder="请输入验证码" />
+                </TextField>
                 {captcha.img ? (
                   <img
                     src={captcha.img}
                     alt="验证码"
-                    className="h-10 cursor-pointer rounded-medium"
+                    className="h-10 cursor-pointer rounded-lg"
                     onClick={refreshCaptcha}
                   />
                 ) : (
-                  <Button variant="flat" onPress={refreshCaptcha}>
+                  <Button variant="secondary" type="button" onPress={refreshCaptcha}>
                     获取
                   </Button>
                 )}
               </div>
-              <Button type="submit" color="primary" isLoading={submitting}>
+              <Button type="submit" variant="primary" isPending={submitting}>
                 登 录
               </Button>
             </form>
-          </CardBody>
+          </CardContent>
         </Card>
       </div>
     </div>

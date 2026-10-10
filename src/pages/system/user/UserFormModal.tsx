@@ -3,15 +3,28 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Button,
   Input,
-  Modal,
+  Label,
+  ListBox,
+  ListBoxItem,
+  ModalBackdrop,
   ModalBody,
-  ModalContent,
+  ModalContainer,
+  ModalDialog,
   ModalFooter,
   ModalHeader,
-  Select,
-  SelectItem,
+  ModalRoot,
+  SelectIndicator,
+  SelectPopover,
+  SelectRoot,
+  SelectTrigger,
+  SelectValue,
   Switch,
-  addToast,
+  SwitchContent,
+  SwitchControl,
+  SwitchThumb,
+  TextField,
+  toast,
+  useOverlayState,
 } from '@heroui/react'
 import { addUser, editUser, getDeptTree } from '../../../api/user'
 import { flattenDeptTree } from './deptTree'
@@ -35,6 +48,7 @@ const emptyForm = {
 
 export default function UserFormModal({ isOpen, editing, onClose }: Props) {
   const queryClient = useQueryClient()
+  const state = useOverlayState({ isOpen, onOpenChange: (v) => !v && onClose() })
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
 
@@ -61,11 +75,11 @@ export default function UserFormModal({ isOpen, editing, onClose }: Props) {
 
   const handleSubmit = async () => {
     if (!form.userName || !form.nickName || form.deptId.size === 0) {
-      addToast({ title: '提示', description: '请填写账号、昵称并选择部门', color: 'warning' })
+      toast('提示', { description: '请填写账号、昵称并选择部门', variant: 'warning' })
       return
     }
     if (!editing && !form.password) {
-      addToast({ title: '提示', description: '新增用户必须填写密码', color: 'warning' })
+      toast('提示', { description: '新增用户必须填写密码', variant: 'warning' })
       return
     }
     setSaving(true)
@@ -82,10 +96,10 @@ export default function UserFormModal({ isOpen, editing, onClose }: Props) {
       }
       if (editing) {
         await editUser({ ...payload, userId: editing.user_id })
-        addToast({ title: '成功', description: '修改成功', color: 'success' })
+        toast('成功', { description: '修改成功', variant: 'success' })
       } else {
         await addUser({ ...payload, password: form.password })
-        addToast({ title: '成功', description: '新增成功', color: 'success' })
+        toast('成功', { description: '新增成功', variant: 'success' })
       }
       queryClient.invalidateQueries({ queryKey: ['user-list'] })
       queryClient.invalidateQueries({ queryKey: ['user-total'] })
@@ -98,66 +112,83 @@ export default function UserFormModal({ isOpen, editing, onClose }: Props) {
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="lg">
-      <ModalContent>
-        <ModalHeader>{editing ? '编辑用户' : '新增用户'}</ModalHeader>
-        <ModalBody className="gap-4">
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="账号"
-              value={form.userName}
-              onValueChange={(v) => setForm((f) => ({ ...f, userName: v }))}
-              isDisabled={!!editing}
-            />
-            <Input
-              label="昵称"
-              value={form.nickName}
-              onValueChange={(v) => setForm((f) => ({ ...f, nickName: v }))}
-            />
-            {!editing && (
-              <Input
-                label="密码"
-                type="password"
-                value={form.password}
-                onValueChange={(v) => setForm((f) => ({ ...f, password: v }))}
-              />
-            )}
-            <Input
-              label="手机号"
-              value={form.phonenumber}
-              onValueChange={(v) => setForm((f) => ({ ...f, phonenumber: v }))}
-            />
-            <Input
-              label="邮箱"
-              value={form.email}
-              onValueChange={(v) => setForm((f) => ({ ...f, email: v }))}
-            />
-            <Select
-              label="部门"
-              selectedKeys={form.deptId}
-              onSelectionChange={(keys) => setForm((f) => ({ ...f, deptId: new Set(Array.from(keys as Set<string>)) }))}
-            >
-              {deptOptions.map((dept) => (
-                <SelectItem key={String(dept.id)}>{dept.label}</SelectItem>
-              ))}
-            </Select>
-          </div>
-          <Switch
-            isSelected={form.status === '0'}
-            onValueChange={(v) => setForm((f) => ({ ...f, status: v ? '0' : '1' }))}
-          >
-            状态正常
-          </Switch>
-        </ModalBody>
-        <ModalFooter>
-          <Button variant="flat" onPress={onClose}>
-            取消
-          </Button>
-          <Button color="primary" isLoading={saving} onPress={handleSubmit}>
-            保存
-          </Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+    <ModalRoot state={state}>
+      <ModalBackdrop>
+        <ModalContainer size="lg">
+          <ModalDialog>
+            <ModalHeader>{editing ? '编辑用户' : '新增用户'}</ModalHeader>
+            <ModalBody className="flex flex-col gap-4">
+              <div className="grid grid-cols-2 gap-4">
+                <TextField value={form.userName} onChange={(v) => setForm((f) => ({ ...f, userName: v }))} isRequired isDisabled={!!editing}>
+                  <Label>账号</Label>
+                  <Input />
+                </TextField>
+                <TextField value={form.nickName} onChange={(v) => setForm((f) => ({ ...f, nickName: v }))} isRequired>
+                  <Label>昵称</Label>
+                  <Input />
+                </TextField>
+                {!editing && (
+                  <TextField value={form.password} onChange={(v) => setForm((f) => ({ ...f, password: v }))} isRequired>
+                    <Label>密码</Label>
+                    <Input type="password" />
+                  </TextField>
+                )}
+                <TextField value={form.phonenumber} onChange={(v) => setForm((f) => ({ ...f, phonenumber: v }))}>
+                  <Label>手机号</Label>
+                  <Input />
+                </TextField>
+                <TextField value={form.email} onChange={(v) => setForm((f) => ({ ...f, email: v }))}>
+                  <Label>邮箱</Label>
+                  <Input />
+                </TextField>
+                <SelectRoot
+                  aria-label="部门"
+                  selectedKey={form.deptId.size > 0 ? Array.from(form.deptId)[0] : null}
+                  onSelectionChange={(key) =>
+                    setForm((f) => ({
+                      ...f,
+                      deptId: key != null ? new Set([String(key)]) : new Set<string>(),
+                    }))
+                  }
+                >
+                  <Label>部门</Label>
+                  <SelectTrigger>
+                    <SelectValue />
+                    <SelectIndicator />
+                  </SelectTrigger>
+                  <SelectPopover>
+                    <ListBox>
+                      {deptOptions.map((dept) => (
+                        <ListBoxItem key={String(dept.id)}>{dept.label}</ListBoxItem>
+                      ))}
+                    </ListBox>
+                  </SelectPopover>
+                </SelectRoot>
+              </div>
+              <Switch
+                isSelected={form.status === '0'}
+                onChange={(v) => setForm((f) => ({ ...f, status: v ? '0' : '1' }))}
+                aria-label="状态正常"
+              >
+                <SwitchContent>
+                  <SwitchControl>
+                    <SwitchThumb />
+                  </SwitchControl>
+                </SwitchContent>
+                状态正常
+              </Switch>
+            </ModalBody>
+            <ModalFooter>
+              <Button variant="secondary" onPress={onClose}>
+                取消
+              </Button>
+              <Button variant="primary" isPending={saving} onPress={handleSubmit}>
+                保存
+              </Button>
+            </ModalFooter>
+          </ModalDialog>
+        </ModalContainer>
+      </ModalBackdrop>
+    </ModalRoot>
   )
 }

@@ -1,5 +1,5 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { Avatar, Tooltip } from '@heroui/react'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@heroui/react'
 import { Home, LogOut, Users } from 'lucide-react'
 import { useAuthStore } from '../../stores/auth'
 import { logout } from '../../api/auth'
@@ -27,7 +27,7 @@ export default function AppShell() {
 
   return (
     <div className="flex h-screen bg-background">
-      <aside className="flex w-56 flex-col border-r border-divider bg-content1">
+      <aside className="flex w-56 flex-col border-r border-separator bg-surface">
         <div className="flex h-16 items-center px-5 text-lg font-semibold">Admin 平台</div>
         <nav className="flex-1 space-y-1 px-3">
           {navItems.map((item) => {
@@ -37,10 +37,10 @@ export default function AppShell() {
               <button
                 key={item.path}
                 onClick={() => navigate(item.path)}
-                className={`flex w-full cursor-pointer items-center gap-3 rounded-medium px-4 py-2.5 text-left text-small transition-colors ${
+                className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-4 py-2.5 text-left text-sm transition-colors ${
                   active
-                    ? 'bg-primary/15 font-medium text-primary'
-                    : 'text-foreground-600 hover:bg-default-100'
+                    ? 'bg-accent/15 font-medium text-accent'
+                    : 'text-foreground/70 hover:bg-surface-secondary'
                 }`}
               >
                 <Icon size={16} aria-hidden />
@@ -51,20 +51,21 @@ export default function AppShell() {
         </nav>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 items-center justify-end gap-3 border-b border-divider bg-content1 px-6">
-          <Avatar
-            name={user?.nick_name?.slice(0, 1) ?? 'A'}
-            size="sm"
-            className="cursor-pointer"
-          />
-          <Tooltip content="退出登录">
-            <button
-              onClick={handleLogout}
-              className="flex cursor-pointer items-center gap-1.5 text-small text-foreground-500 transition-colors hover:text-danger"
-            >
-              <LogOut size={14} aria-hidden />
-              退出
-            </button>
+        <header className="flex h-16 items-center justify-end gap-3 border-b border-separator bg-surface px-6">
+          <span className="flex size-8 cursor-pointer items-center justify-center rounded-full bg-accent text-sm font-medium text-accent-foreground">
+            {user?.nick_name?.slice(0, 1) ?? 'A'}
+          </span>
+          <Tooltip>
+            <TooltipTrigger>
+              <button
+                onClick={handleLogout}
+                className="flex cursor-pointer items-center gap-1.5 text-sm text-muted transition-colors hover:text-danger"
+              >
+                <LogOut size={14} aria-hidden />
+                退出
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>退出登录</TooltipContent>
           </Tooltip>
         </header>
         <main className="flex-1 overflow-auto p-6">
