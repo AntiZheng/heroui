@@ -1,5 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
-import { Card, CardContent, ProgressBar, ProgressBarFill, ProgressBarTrack } from '@heroui/react'
+import {
+  Card,
+  CardContent,
+  ProgressBar,
+  ProgressBarFill,
+  ProgressBarTrack,
+  Typography,
+} from '@heroui/react'
 import { getUserList } from '../../api/user'
 import request from '../../api/request'
 import { useAuthStore } from '../../stores/auth'
@@ -37,23 +44,25 @@ export default function HomePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">
+        <Typography.Heading level={3}>
           {greeting()}，{nickName ?? '管理员'}
-        </h1>
-        <p className="mt-1 text-sm text-muted">欢迎使用 Admin 管理平台</p>
+        </Typography.Heading>
+        <Typography.Paragraph size="sm" color="muted" className="mt-1">
+          欢迎使用 Admin 管理平台
+        </Typography.Paragraph>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Card>
           <CardContent className="flex flex-col gap-1">
-            <p className="text-sm text-muted">用户总数</p>
-            <p className="text-3xl font-bold tabular-nums">{userTotal ?? '—'}</p>
+            <Typography.Paragraph size="sm" color="muted">用户总数</Typography.Paragraph>
+            <p className="text-3xl font-semibold tracking-tight tabular-nums">{userTotal ?? '—'}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="flex flex-col gap-1">
-            <p className="text-sm text-muted">内存使用</p>
-            <p className="text-3xl font-bold tabular-nums">{server ? `${server.memory.usage}%` : '—'}</p>
+            <Typography.Paragraph size="sm" color="muted">内存使用</Typography.Paragraph>
+            <p className="text-3xl font-semibold tracking-tight tabular-nums">{server ? `${server.memory.usage}%` : '—'}</p>
             {server && (
               <ProgressBar aria-label="内存使用率" value={server.memory.usage}>
                 {({ percentage }) => (
@@ -67,8 +76,8 @@ export default function HomePage() {
         </Card>
         <Card>
           <CardContent className="flex flex-col gap-1">
-            <p className="text-sm text-muted">磁盘使用</p>
-            <p className="text-3xl font-bold tabular-nums">{server ? `${server.disk.usage}%` : '—'}</p>
+            <Typography.Paragraph size="sm" color="muted">磁盘使用</Typography.Paragraph>
+            <p className="text-3xl font-semibold tracking-tight tabular-nums">{server ? `${server.disk.usage}%` : '—'}</p>
             {server && (
               <ProgressBar aria-label="磁盘使用率" value={server.disk.usage}>
                 {({ percentage }) => (
@@ -86,20 +95,20 @@ export default function HomePage() {
         <Card>
           <CardContent className="flex flex-row flex-wrap gap-6">
             <div>
-              <p className="text-sm text-muted">CPU 核心 / 使用率</p>
-              <p className="font-medium">
+              <Typography.Paragraph size="sm" color="muted">CPU 核心 / 使用率</Typography.Paragraph>
+              <Typography.Paragraph size="base" weight="medium">
                 {server.cpu.cpuNum} 核 · {server.cpu.cpuUsed}%
-              </p>
+              </Typography.Paragraph>
             </div>
             <div>
-              <p className="text-sm text-muted">内存</p>
-              <p className="font-medium">
+              <Typography.Paragraph size="sm" color="muted">内存</Typography.Paragraph>
+              <Typography.Paragraph size="base" weight="medium">
                 {server.memory.used}G / {server.memory.total}G
-              </p>
+              </Typography.Paragraph>
             </div>
             <div>
-              <p className="text-sm text-muted">Python 版本</p>
-              <p className="font-medium">{server.python.version}</p>
+              <Typography.Paragraph size="sm" color="muted">Python 版本</Typography.Paragraph>
+              <Typography.Paragraph size="base" weight="medium">{server.python.version}</Typography.Paragraph>
             </div>
           </CardContent>
         </Card>

@@ -36,6 +36,7 @@ import {
   TableRoot,
   TableRow,
   TableScrollContainer,
+  Typography,
 } from '@heroui/react'
 import { RotateCcw, Search, Users } from 'lucide-react'
 import { getDeptTree, getUserList } from '../../../api/user'
@@ -214,7 +215,7 @@ export default function UserPage() {
       </Card>
 
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold">用户列表</h2>
+        <Typography.Heading level={6}>用户列表</Typography.Heading>
         {hasPermission('system:user:add') && (
           <Button variant="primary" onPress={openCreate}>
             新增用户
@@ -239,7 +240,7 @@ export default function UserPage() {
                 ) : (
                   <EmptyState className="flex flex-col items-center justify-center gap-2 py-8">
                     <Users size={20} aria-hidden className="text-muted" />
-                    <span className="text-sm text-muted">暂无数据</span>
+                    <Typography.Paragraph size="sm" color="muted">暂无数据</Typography.Paragraph>
                   </EmptyState>
                 )
               }

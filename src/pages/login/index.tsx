@@ -9,6 +9,7 @@ import {
   Input,
   Label,
   TextField,
+  Typography,
 } from '@heroui/react'
 import { getCaptcha, login, getInfo } from '../../api/auth'
 import { useAuthStore } from '../../stores/auth'
@@ -60,13 +61,15 @@ export default function LoginPage() {
       <div className="relative hidden flex-1 flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-accent via-accent/90 to-accent/70 lg:flex">
         <div className="absolute -left-24 -top-24 size-96 rounded-full bg-white/10 blur-2xl" aria-hidden />
         <div className="absolute -bottom-32 -right-16 h-[28rem] w-[28rem] rounded-full bg-white/10 blur-3xl" aria-hidden />
-        <h1 className="relative text-4xl font-bold text-accent-foreground">Admin 管理平台</h1>
+        <Typography.Heading level={1} className="relative text-accent-foreground">
+          Admin 管理平台
+        </Typography.Heading>
         <p className="relative mt-4 text-accent-foreground/80">HeroUI × FastAPI 最小验证版</p>
       </div>
       <div className="flex flex-1 items-center justify-center">
         <Card className="w-full max-w-sm">
           <CardContent className="flex flex-col gap-4 p-8">
-            <h2 className="text-2xl font-semibold">欢迎回来</h2>
+            <Typography.Heading level={3}>欢迎回来</Typography.Heading>
             <Form className="flex flex-col gap-4" onSubmit={handleSubmit}>
               <TextField value={username} onChange={setUsername} name="username" isRequired>
                 <Label>账号</Label>

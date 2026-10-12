@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@heroui/react'
+import { Tooltip, TooltipContent, TooltipTrigger, Typography } from '@heroui/react'
 import {
   Home,
   LayoutGrid,
@@ -91,7 +91,7 @@ export default function AppShell() {
           <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground">
             <LayoutGrid size={16} aria-hidden />
           </span>
-          {!collapsed && <span className="text-lg font-semibold">Admin 平台</span>}
+          {!collapsed && <Typography.Heading level={5}>Admin 平台</Typography.Heading>}
         </div>
         <nav className={`flex-1 ${collapsed ? 'px-1.5' : 'px-3'}`}>
           {navItems.map((item) => {
@@ -100,7 +100,9 @@ export default function AppShell() {
             return (
               <div key={item.path}>
                 {withGroup && (
-                  <div className="px-4 pb-1 pt-5 text-xs font-medium text-muted">{withGroup}</div>
+                  <Typography.Paragraph size="xs" weight="medium" color="muted" className="px-4 pb-1 pt-5">
+                    {withGroup}
+                  </Typography.Paragraph>
                 )}
                 {renderNavItem(item)}
               </div>
