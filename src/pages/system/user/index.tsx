@@ -302,22 +302,10 @@ export default function UserPage() {
               }
             >
               {(row) => (
-                <TableRow>
-                  {visibleCols.has('user_id') && <TableCell>{renderCell(row, 'user_id')}</TableCell>}
-                  {visibleCols.has('user_name') && (
-                    <TableCell>{renderCell(row, 'user_name')}</TableCell>
-                  )}
-                  {visibleCols.has('nick_name') && (
-                    <TableCell>{renderCell(row, 'nick_name')}</TableCell>
-                  )}
-                  {visibleCols.has('phonenumber') && (
-                    <TableCell>{renderCell(row, 'phonenumber')}</TableCell>
-                  )}
-                  {visibleCols.has('status') && <TableCell>{renderCell(row, 'status')}</TableCell>}
-                  {visibleCols.has('create_time') && (
-                    <TableCell>{renderCell(row, 'create_time')}</TableCell>
-                  )}
-                  <TableCell>{renderCell(row, 'actions')}</TableCell>
+                <TableRow id={row.id}>
+                  {visibleColumns.map((col) => (
+                    <TableCell key={col.key}>{renderCell(row, col.key)}</TableCell>
+                  ))}
                 </TableRow>
               )}
             </TableBody>
