@@ -4,6 +4,7 @@ import {
   Button,
   Card,
   CardContent,
+  Checkbox,
   Chip,
   EmptyState,
   Input,
@@ -20,6 +21,7 @@ import {
   PaginationPreviousIcon,
   PaginationRoot,
   PaginationSummary,
+  Popover,
   SearchField,
   SelectIndicator,
   SelectPopover,
@@ -38,7 +40,7 @@ import {
   TableScrollContainer,
   Typography,
 } from '@heroui/react'
-import { RotateCcw, Search, Users } from 'lucide-react'
+import { RotateCcw, Search, Settings2, Users } from 'lucide-react'
 import { getDeptTree, getUserList } from '../../../api/user'
 import { hasPermission } from '../../../stores/auth'
 import { flattenDeptTree } from './deptTree'
@@ -61,11 +63,35 @@ function pageWindow(total: number, current: number): (number | '…')[] {
   return pages
 }
 
+const columns = [
+  { key: 'user_id', label: 'ID' },
+  { key: 'user_name', label: '账号' },
+  { key: 'nick_name', label: '昵称' },
+  { key: 'phonenumber', label: '手机号' },
+  { key: 'status', label: '状态' },
+  { key: 'create_time', label: '创建时间' },
+  { key: 'actions', label: '操作' },
+]
+
+const COLS_STORAGE_KEY = 'user-table-cols'
+const DEFAULT_VISIBLE_COLS = columns.map((c) => c.key)
+
+function loadVisibleCols(): Set<string> {
+  try {
+    const raw = localStorage.getItem(COLS_STORAGE_KEY)
+    if (raw) return new Set(JSON.parse(raw) as string[])
+  } catch {
+    // 存储损坏时回退默认全显
+  }
+  return new Set(DEFAULT_VISIBLE_COLS)
+}
+
 export default function UserPage() {
   const [query, setQuery] = useState<UserListQuery>({ pageNum: 1, pageSize: PAGE_SIZE })
   const [userNameInput, setUserNameInput] = useState('')
   const [phoneInput, setPhoneInput] = useState('')
   const [jumpTo, setJumpTo] = useState('')
+  const [visibleCols, setVisibleCols] = useState(loadVisibleCols)
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<SysUserRow | null>(null)
 
@@ -103,6 +129,18 @@ export default function UserPage() {
     setJumpTo('')
   }
 
+  const toggleCol = (key: string, selected: boolean) => {
+    setVisibleCols((prev) => {
+      const next = new Set(prev)
+      if (selected) next.add(key)
+      else next.delete(key)
+      localStorage.setItem(COLS_STORAGE_KEY, JSON.stringify([...next]))
+      return next
+    })
+  }
+
+  const visibleColumns = columns.filter((c) => visibleCols.has(c.key))
+
   const search = () =>
     setQuery((q) => ({ ...q, pageNum: 1, userName: userNameInput, phonenumber: phoneInput }))
 
@@ -111,16 +149,6 @@ export default function UserPage() {
     setPhoneInput('')
     setQuery({ pageNum: 1, pageSize: PAGE_SIZE })
   }
-
-  const columns = [
-    { key: 'user_id', label: 'ID' },
-    { key: 'user_name', label: '账号' },
-    { key: 'nick_name', label: '昵称' },
-    { key: 'phonenumber', label: '手机号' },
-    { key: 'status', label: '状态' },
-    { key: 'create_time', label: '创建时间' },
-    { key: 'actions', label: '操作' },
-  ]
 
   // HeroUI v3 的 Row 子级渲染函数(columnKey)不生效，需静态 Cell；items 需自带 id
   const rowsWithId = useMemo(
@@ -216,18 +244,46 @@ export default function UserPage() {
 
       <div className="flex items-center justify-between">
         <Typography.Heading level={6}>用户列表</Typography.Heading>
-        {hasPermission('system:user:add') && (
-          <Button variant="primary" onPress={openCreate}>
-            新增用户
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          <Popover>
+            <Button variant="secondary" aria-label="列设置">
+              <Settings2 size={14} aria-hidden />
+              列设置
+            </Button>
+            <Popover.Content className="w-36">
+              <div aria-label="显示列" className="flex flex-col gap-1 p-2" role="group">
+                {columns
+                  .filter((c) => c.key !== 'actions')
+                  .map((col) => (
+                    <Checkbox
+                      key={col.key}
+                      isSelected={visibleCols.has(col.key)}
+                      onChange={(selected) => toggleCol(col.key, selected)}
+                    >
+                      <Checkbox.Content>
+                        <Checkbox.Control>
+                          <Checkbox.Indicator />
+                        </Checkbox.Control>
+                        {col.label}
+                      </Checkbox.Content>
+                    </Checkbox>
+                  ))}
+              </div>
+            </Popover.Content>
+          </Popover>
+          {hasPermission('system:user:add') && (
+            <Button variant="primary" onPress={openCreate}>
+              新增用户
+            </Button>
+          )}
+        </div>
       </div>
       <TableRoot>
         <TableScrollContainer>
           <TableContent aria-label="用户列表" className="min-w-[720px]">
             <TableHeader>
-              {columns.map((col) => (
-                <TableColumn key={col.key} isRowHeader={col.key === 'user_name'}>
+              {visibleColumns.map((col) => (
+                <TableColumn key={col.key} id={col.key} isRowHeader={col.key === 'user_name'}>
                   {col.label}
                 </TableColumn>
               ))}
@@ -247,12 +303,20 @@ export default function UserPage() {
             >
               {(row) => (
                 <TableRow>
-                  <TableCell>{renderCell(row, 'user_id')}</TableCell>
-                  <TableCell>{renderCell(row, 'user_name')}</TableCell>
-                  <TableCell>{renderCell(row, 'nick_name')}</TableCell>
-                  <TableCell>{renderCell(row, 'phonenumber')}</TableCell>
-                  <TableCell>{renderCell(row, 'status')}</TableCell>
-                  <TableCell>{renderCell(row, 'create_time')}</TableCell>
+                  {visibleCols.has('user_id') && <TableCell>{renderCell(row, 'user_id')}</TableCell>}
+                  {visibleCols.has('user_name') && (
+                    <TableCell>{renderCell(row, 'user_name')}</TableCell>
+                  )}
+                  {visibleCols.has('nick_name') && (
+                    <TableCell>{renderCell(row, 'nick_name')}</TableCell>
+                  )}
+                  {visibleCols.has('phonenumber') && (
+                    <TableCell>{renderCell(row, 'phonenumber')}</TableCell>
+                  )}
+                  {visibleCols.has('status') && <TableCell>{renderCell(row, 'status')}</TableCell>}
+                  {visibleCols.has('create_time') && (
+                    <TableCell>{renderCell(row, 'create_time')}</TableCell>
+                  )}
                   <TableCell>{renderCell(row, 'actions')}</TableCell>
                 </TableRow>
               )}
