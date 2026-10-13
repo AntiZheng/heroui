@@ -5,6 +5,7 @@ import {
   Home,
   LayoutGrid,
   LogOut,
+  Monitor,
   Moon,
   PanelLeftClose,
   PanelLeftOpen,
@@ -26,7 +27,7 @@ export default function AppShell() {
   const user = useAuthStore((s) => s.user)
   const clear = useAuthStore((s) => s.clear)
   const theme = useThemeStore((s) => s.theme)
-  const toggleTheme = useThemeStore((s) => s.toggle)
+  const setTheme = useThemeStore((s) => s.setTheme)
 
   const [collapsed, setCollapsed] = useState(
     () => localStorage.getItem('sidebar-collapsed') === '1',
@@ -134,18 +135,34 @@ export default function AppShell() {
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-16 items-center justify-end gap-3 border-b border-separator bg-surface px-6">
-          <Tooltip>
-            <TooltipTrigger>
+          <div
+            role="radiogroup"
+            aria-label="主题模式"
+            className="flex items-center gap-0.5 rounded-full border border-separator bg-surface-secondary p-1"
+          >
+            {(
+              [
+                ['light', Sun, '浅色模式'],
+                ['dark', Moon, '深色模式'],
+                ['system', Monitor, '跟随系统'],
+              ] as const
+            ).map(([value, Icon, label]) => (
               <button
-                onClick={toggleTheme}
-                aria-label={theme === 'dark' ? '切换亮色模式' : '切换暗色模式'}
-                className="flex size-8 cursor-pointer items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-secondary hover:text-foreground"
+                key={value}
+                role="radio"
+                aria-checked={theme === value}
+                aria-label={label}
+                onClick={() => setTheme(value)}
+                className={`flex size-7 cursor-pointer items-center justify-center rounded-full transition-colors ${
+                  theme === value
+                    ? 'bg-surface text-foreground shadow-sm'
+                    : 'text-muted hover:text-foreground'
+                }`}
               >
-                {theme === 'dark' ? <Sun size={16} aria-hidden /> : <Moon size={16} aria-hidden />}
+                <Icon size={14} aria-hidden />
               </button>
-            </TooltipTrigger>
-            <TooltipContent>{theme === 'dark' ? '切换亮色模式' : '切换暗色模式'}</TooltipContent>
-          </Tooltip>
+            ))}
+          </div>
           <span className="flex size-8 cursor-pointer items-center justify-center rounded-full bg-accent text-sm font-medium text-accent-foreground">
             {user?.nick_name?.slice(0, 1) ?? 'A'}
           </span>
