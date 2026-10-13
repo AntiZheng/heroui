@@ -290,6 +290,8 @@ export default function UserPage() {
             </TableHeader>
             <TableBody
               items={rowsWithId}
+              // RAC 会缓存行渲染结果，列集变化时需靠 dependencies 强制重建行，否则单元格数与表头不一致抛错白屏
+              dependencies={[visibleColumns]}
               renderEmptyState={() =>
                 isPending ? (
                   <Spinner />
