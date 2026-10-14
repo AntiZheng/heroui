@@ -237,11 +237,14 @@ export default function UserPage() {
     return () => ro.disconnect()
   }, [colSignature, rowsWithId])
 
-  const stickyColProps = (key: string) => {
+  // secondary 变体的单元格透明，sticky 固定列需补不透明背景
+  const stickyColProps = (key: string, isHeader: boolean) => {
     const i = visibleColumns.findIndex((c) => c.key === key)
     if (i < 0 || !pinnedSet.has(key)) return {}
     return {
-      className: `sticky z-10 ${i === lastPinnedIndex ? 'shadow-[8px_0_12px_-6px_rgba(0,0,0,0.15)]' : ''}`,
+      className: `sticky z-10 ${isHeader ? 'bg-surface-secondary' : 'bg-surface'} ${
+        i === lastPinnedIndex ? 'shadow-[8px_0_12px_-6px_rgba(0,0,0,0.15)]' : ''
+      }`,
       style: { left: colOffsets[i] ?? 0 },
     }
   }
@@ -286,10 +289,11 @@ export default function UserPage() {
   return (
     <div className="space-y-6">
       <div ref={tableAreaRef}>
-        <TableRoot>
+        <TableRoot variant="secondary" className="rounded-2xl border border-separator bg-surface shadow-sm">
           <div className="flex flex-row flex-wrap items-end gap-3 border-b border-separator px-4 pb-4 pt-4">
           <SearchField
             aria-label="按账号搜索"
+            variant="secondary"
             value={userNameInput}
             onChange={setUserNameInput}
             onSubmit={search}
@@ -304,6 +308,7 @@ export default function UserPage() {
           </SearchField>
           <SearchField
             aria-label="按手机号搜索"
+            variant="secondary"
             value={phoneInput}
             onChange={setPhoneInput}
             onSubmit={search}
@@ -318,6 +323,7 @@ export default function UserPage() {
           </SearchField>
           <SelectRoot
             aria-label="部门"
+            variant="secondary"
             className="w-48"
             selectedKey={query.deptId ? String(query.deptId) : null}
             onSelectionChange={(key) => {
@@ -454,7 +460,7 @@ export default function UserPage() {
                     key={col.key}
                     id={col.key}
                     isRowHeader={col.key === visibleColumns[0].key}
-                    {...stickyColProps(col.key)}
+                    {...stickyColProps(col.key, true)}
                   >
                     {col.label}
                   </TableColumn>
@@ -478,7 +484,7 @@ export default function UserPage() {
                 {(row) => (
                   <TableRow id={row.id}>
                     {visibleColumns.map((col) => (
-                      <TableCell key={col.key} {...stickyColProps(col.key)}>
+                      <TableCell key={col.key} {...stickyColProps(col.key, false)}>
                         {renderCell(row, col.key)}
                       </TableCell>
                     ))}
