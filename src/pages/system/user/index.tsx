@@ -242,7 +242,7 @@ export default function UserPage() {
     const i = visibleColumns.findIndex((c) => c.key === key)
     if (i < 0 || !pinnedSet.has(key)) return {}
     return {
-      className: `sticky z-10 ${isHeader ? 'bg-surface-secondary' : 'bg-background'} ${
+      className: `sticky z-10 ${isHeader ? 'bg-surface-secondary' : 'bg-field'} ${
         i === lastPinnedIndex ? 'shadow-[8px_0_12px_-6px_rgba(0,0,0,0.15)]' : ''
       }`,
       style: { left: colOffsets[i] ?? 0 },
@@ -450,7 +450,7 @@ export default function UserPage() {
         </div>
       </div>
           <TableScrollContainer>
-            <TableContent aria-label="用户列表" className="min-w-[720px] bg-background">
+            <TableContent aria-label="用户列表" className="min-w-[720px] bg-field">
               <TableHeader>
                 {visibleColumns.map((col) => (
                   <TableColumn
