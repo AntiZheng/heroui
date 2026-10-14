@@ -110,7 +110,7 @@ export default function RowActions({ row, onEdit }: Props) {
       )}
       {hasPermission('system:user:remove') && (
         <AlertDialog>
-          <Button size="sm" variant="danger-soft">
+          <Button size="sm" variant="danger">
             删除
           </Button>
           <AlertDialog.Backdrop>
