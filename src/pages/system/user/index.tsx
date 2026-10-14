@@ -449,7 +449,8 @@ export default function UserPage() {
           )}
         </div>
       </div>
-          <TableScrollContainer>
+          <div className="mx-4 overflow-hidden rounded-2xl border border-separator">
+            <TableScrollContainer>
             <TableContent aria-label="用户列表" className="min-w-[720px] bg-field">
               <TableHeader>
                 {visibleColumns.map((col) => (
@@ -490,6 +491,7 @@ export default function UserPage() {
               </TableBody>
             </TableContent>
           </TableScrollContainer>
+          </div>
         <TableFooter>
           <PaginationRoot size="sm">
             <PaginationSummary>
