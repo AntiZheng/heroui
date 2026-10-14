@@ -344,7 +344,7 @@ export default function UserPage() {
               </ListBox>
             </SelectPopover>
           </SelectRoot>
-          <Button variant="primary" onPress={search}>
+          <Button variant="primary" onPress={search} className="ml-auto">
             <Search size={14} aria-hidden />
             搜索
           </Button>
