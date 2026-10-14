@@ -145,18 +145,6 @@ export default function AppShell() {
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-16 items-center justify-end gap-3 border-b border-separator bg-surface px-6">
-          {crumbs.length > 0 && (
-            <Breadcrumbs className="mr-auto">
-              {crumbs.map((crumb) => (
-                <Breadcrumbs.Item
-                  key={crumb.label}
-                  onPress={crumb.path ? () => navigate(crumb.path!) : undefined}
-                >
-                  {crumb.label}
-                </Breadcrumbs.Item>
-              ))}
-            </Breadcrumbs>
-          )}
           <div
             role="radiogroup"
             aria-label="主题模式"
@@ -202,6 +190,18 @@ export default function AppShell() {
           </Tooltip>
         </header>
         <main className="flex-1 overflow-auto p-6">
+          {crumbs.length > 0 && (
+            <Breadcrumbs className="mb-3">
+              {crumbs.map((crumb) => (
+                <Breadcrumbs.Item
+                  key={crumb.label}
+                  onPress={crumb.path ? () => navigate(crumb.path!) : undefined}
+                >
+                  {crumb.label}
+                </Breadcrumbs.Item>
+              ))}
+            </Breadcrumbs>
+          )}
           <Outlet />
         </main>
       </div>
