@@ -451,7 +451,7 @@ export default function UserPage() {
       </div>
           <div className="mx-4 overflow-hidden rounded-2xl border border-separator">
             <TableScrollContainer>
-            <TableContent aria-label="用户列表" className="min-w-[720px] bg-field">
+            <TableContent aria-label="用户列表" className="min-w-[720px]">
               <TableHeader>
                 {visibleColumns.map((col) => (
                   <TableColumn
@@ -480,7 +480,7 @@ export default function UserPage() {
                 }
               >
                 {(row) => (
-                  <TableRow id={row.id}>
+                  <TableRow id={row.id} className="bg-field">
                     {visibleColumns.map((col) => (
                       <TableCell key={col.key} {...stickyColProps(col.key, false)}>
                         {renderCell(row, col.key)}
