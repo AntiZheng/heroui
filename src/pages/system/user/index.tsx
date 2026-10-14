@@ -293,7 +293,6 @@ export default function UserPage() {
           <div className="flex flex-row flex-wrap items-end gap-3 border-b border-separator px-4 pb-4 pt-4">
           <SearchField
             aria-label="按账号搜索"
-            variant="secondary"
             value={userNameInput}
             onChange={setUserNameInput}
             onSubmit={search}
@@ -308,7 +307,6 @@ export default function UserPage() {
           </SearchField>
           <SearchField
             aria-label="按手机号搜索"
-            variant="secondary"
             value={phoneInput}
             onChange={setPhoneInput}
             onSubmit={search}
@@ -323,7 +321,6 @@ export default function UserPage() {
           </SearchField>
           <SelectRoot
             aria-label="部门"
-            variant="secondary"
             className="w-48"
             selectedKey={query.deptId ? String(query.deptId) : null}
             onSelectionChange={(key) => {
