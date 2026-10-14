@@ -242,7 +242,7 @@ export default function UserPage() {
     const i = visibleColumns.findIndex((c) => c.key === key)
     if (i < 0 || !pinnedSet.has(key)) return {}
     return {
-      className: `sticky z-10 ${isHeader ? 'bg-surface-secondary' : 'bg-surface'} ${
+      className: `sticky z-10 ${isHeader ? 'bg-surface-secondary' : 'bg-background'} ${
         i === lastPinnedIndex ? 'shadow-[8px_0_12px_-6px_rgba(0,0,0,0.15)]' : ''
       }`,
       style: { left: colOffsets[i] ?? 0 },
@@ -289,7 +289,7 @@ export default function UserPage() {
   return (
     <div className="space-y-6">
       <div ref={tableAreaRef}>
-        <TableRoot variant="secondary" className="rounded-2xl border border-separator bg-surface shadow-sm">
+        <TableRoot variant="secondary">
           <div className="flex flex-row flex-wrap items-end gap-3 border-b border-separator px-4 pb-4 pt-4">
           <SearchField
             aria-label="按账号搜索"
