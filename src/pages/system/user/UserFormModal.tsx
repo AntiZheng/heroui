@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  AlertDialog,
   Button,
   Input,
   Label,
@@ -51,6 +52,7 @@ export default function UserFormModal({ isOpen, editing, onClose }: Props) {
   const state = useOverlayState({ isOpen, onOpenChange: (v) => !v && onClose() })
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
+  const [successName, setSuccessName] = useState<string | null>(null)
 
   const { data: deptTreeData } = useQuery({ queryKey: ['dept-tree'], queryFn: getDeptTree })
   const deptOptions = useMemo(() => flattenDeptTree(deptTreeData ?? []), [deptTreeData])
@@ -99,7 +101,7 @@ export default function UserFormModal({ isOpen, editing, onClose }: Props) {
         toast('成功', { description: '修改成功', variant: 'success' })
       } else {
         await addUser({ ...payload, password: form.password })
-        toast('成功', { description: '新增成功', variant: 'success' })
+        setSuccessName(form.userName)
       }
       queryClient.invalidateQueries({ queryKey: ['user-list'] })
       queryClient.invalidateQueries({ queryKey: ['user-total'] })
@@ -112,6 +114,7 @@ export default function UserFormModal({ isOpen, editing, onClose }: Props) {
   }
 
   return (
+    <>
     <ModalRoot state={state}>
       <ModalBackdrop>
         <ModalContainer size="lg">
@@ -190,5 +193,32 @@ export default function UserFormModal({ isOpen, editing, onClose }: Props) {
         </ModalContainer>
       </ModalBackdrop>
     </ModalRoot>
+    <AlertDialog
+      isOpen={successName !== null}
+      onOpenChange={(isOpen) => {
+        if (!isOpen) setSuccessName(null)
+      }}
+    >
+      <AlertDialog.Backdrop>
+        <AlertDialog.Container>
+          <AlertDialog.Dialog className="sm:max-w-[400px]">
+            <AlertDialog.CloseTrigger />
+            <AlertDialog.Header>
+              <AlertDialog.Icon status="success" />
+              <AlertDialog.Heading>新增成功</AlertDialog.Heading>
+            </AlertDialog.Header>
+            <AlertDialog.Body>
+              <p>用户「{successName}」已创建。</p>
+            </AlertDialog.Body>
+            <AlertDialog.Footer>
+              <Button slot="close" variant="primary">
+                确定
+              </Button>
+            </AlertDialog.Footer>
+          </AlertDialog.Dialog>
+        </AlertDialog.Container>
+      </AlertDialog.Backdrop>
+    </AlertDialog>
+    </>
   )
 }
