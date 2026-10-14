@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import {
+  AlertDialog,
   Button,
   Input,
   Label,
@@ -43,7 +44,6 @@ export default function RowActions({ row, onEdit }: Props) {
   }
 
   const handleDelete = async () => {
-    if (!window.confirm(`确定删除用户「${row.user_name}」吗？`)) return
     try {
       await deleteUsers([row.user_id])
     } catch {
@@ -109,9 +109,35 @@ export default function RowActions({ row, onEdit }: Props) {
         </Tooltip>
       )}
       {hasPermission('system:user:remove') && (
-        <Button size="sm" variant="danger-soft" onPress={handleDelete}>
-          删除
-        </Button>
+        <AlertDialog>
+          <Button size="sm" variant="danger-soft">
+            删除
+          </Button>
+          <AlertDialog.Backdrop>
+            <AlertDialog.Container>
+              <AlertDialog.Dialog className="sm:max-w-[400px]">
+                <AlertDialog.CloseTrigger />
+                <AlertDialog.Header>
+                  <AlertDialog.Icon status="danger" />
+                  <AlertDialog.Heading>删除用户？</AlertDialog.Heading>
+                </AlertDialog.Header>
+                <AlertDialog.Body>
+                  <p>
+                    确定删除用户「{row.user_name}」吗？该操作不可撤销。
+                  </p>
+                </AlertDialog.Body>
+                <AlertDialog.Footer>
+                  <Button slot="close" variant="tertiary">
+                    取消
+                  </Button>
+                  <Button slot="close" variant="danger" onPress={handleDelete}>
+                    删除
+                  </Button>
+                </AlertDialog.Footer>
+              </AlertDialog.Dialog>
+            </AlertDialog.Container>
+          </AlertDialog.Backdrop>
+        </AlertDialog>
       )}
       <ModalRoot state={resetState}>
         <ModalBackdrop>
