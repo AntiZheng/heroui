@@ -295,7 +295,7 @@ export default function UserPage() {
             onSubmit={search}
             className="w-48"
           >
-            <Label>账号</Label>
+            <Label className="text-xs font-medium text-muted">账号</Label>
             <SearchField.Group>
               <SearchField.SearchIcon />
               <SearchField.Input placeholder="回车搜索" />
@@ -310,7 +310,7 @@ export default function UserPage() {
             onSubmit={search}
             className="w-48"
           >
-            <Label>手机号</Label>
+            <Label className="text-xs font-medium text-muted">手机号</Label>
             <SearchField.Group>
               <SearchField.SearchIcon />
               <SearchField.Input placeholder="回车搜索" />
@@ -326,7 +326,7 @@ export default function UserPage() {
               setQuery((q) => ({ ...q, pageNum: 1, deptId: k ? Number(k) : undefined }))
             }}
           >
-            <Label>部门</Label>
+            <Label className="text-xs font-medium text-muted">部门</Label>
             <SelectTrigger>
               <SelectValue>
                 {({ isPlaceholder, defaultChildren }) =>
