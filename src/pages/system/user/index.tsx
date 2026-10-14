@@ -450,7 +450,7 @@ export default function UserPage() {
         </div>
       </div>
           <TableScrollContainer>
-            <TableContent aria-label="用户列表" className="min-w-[720px]">
+            <TableContent aria-label="用户列表" className="min-w-[720px] bg-background">
               <TableHeader>
                 {visibleColumns.map((col) => (
                   <TableColumn
