@@ -298,7 +298,7 @@ export default function UserPage() {
             <Label className="text-xs font-medium text-muted">账号</Label>
             <SearchField.Group>
               <SearchField.SearchIcon />
-              <SearchField.Input placeholder="回车搜索" />
+              <SearchField.Input placeholder="回车搜索" className="text-sm!" />
               <SearchField.ClearButton />
             </SearchField.Group>
           </SearchField>
@@ -313,7 +313,7 @@ export default function UserPage() {
             <Label className="text-xs font-medium text-muted">手机号</Label>
             <SearchField.Group>
               <SearchField.SearchIcon />
-              <SearchField.Input placeholder="回车搜索" />
+              <SearchField.Input placeholder="回车搜索" className="text-sm!" />
               <SearchField.ClearButton />
             </SearchField.Group>
           </SearchField>
@@ -329,7 +329,7 @@ export default function UserPage() {
           >
             <Label className="text-xs font-medium text-muted">部门</Label>
             <SelectTrigger>
-              <SelectValue>
+              <SelectValue className="text-sm!">
                 {({ isPlaceholder, defaultChildren }) =>
                   isPlaceholder ? <span className="text-muted">全部部门</span> : defaultChildren
                 }
