@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import {
   Button,
@@ -40,7 +40,7 @@ import {
   TableScrollContainer,
   Typography,
 } from '@heroui/react'
-import { RotateCcw, Search, Settings2, Users } from 'lucide-react'
+import { GripVertical, Pin, RotateCcw, Search, Settings2, Users } from 'lucide-react'
 import { getDeptTree, getUserList } from '../../../api/user'
 import { hasPermission } from '../../../stores/auth'
 import { flattenDeptTree } from './deptTree'
@@ -74,16 +74,47 @@ const columns = [
 ]
 
 const COLS_STORAGE_KEY = 'user-table-cols'
-const DEFAULT_VISIBLE_COLS = columns.map((c) => c.key)
 
-function loadVisibleCols(): Set<string> {
+interface ColPrefs {
+  order: string[]
+  visible: string[]
+  pinned: string[]
+}
+
+const DEFAULT_PREFS: ColPrefs = {
+  order: columns.map((c) => c.key),
+  visible: columns.map((c) => c.key),
+  pinned: [],
+}
+
+function loadPrefs(): ColPrefs {
   try {
     const raw = localStorage.getItem(COLS_STORAGE_KEY)
-    if (raw) return new Set(JSON.parse(raw) as string[])
+    if (raw) {
+      const parsed: unknown = JSON.parse(raw)
+      // 旧版格式为纯数组（可见列列表），迁移到新结构
+      if (Array.isArray(parsed)) {
+        const keys = parsed.filter((k) => columns.some((c) => c.key === k))
+        return { ...DEFAULT_PREFS, visible: keys }
+      }
+      if (parsed && typeof parsed === 'object') {
+        const p = parsed as Partial<ColPrefs>
+        const order = [...(p.order ?? DEFAULT_PREFS.order)].filter((k) =>
+          columns.some((c) => c.key === k),
+        )
+        for (const c of columns) if (!order.includes(c.key)) order.push(c.key)
+        const known = new Set(order)
+        return {
+          order,
+          visible: (p.visible ?? []).filter((k) => known.has(k)),
+          pinned: (p.pinned ?? []).filter((k) => known.has(k)),
+        }
+      }
+    }
   } catch {
-    // 存储损坏时回退默认全显
+    // 存储损坏时回退默认
   }
-  return new Set(DEFAULT_VISIBLE_COLS)
+  return DEFAULT_PREFS
 }
 
 export default function UserPage() {
@@ -91,9 +122,70 @@ export default function UserPage() {
   const [userNameInput, setUserNameInput] = useState('')
   const [phoneInput, setPhoneInput] = useState('')
   const [jumpTo, setJumpTo] = useState('')
-  const [visibleCols, setVisibleCols] = useState(loadVisibleCols)
+  const [prefs, setPrefs] = useState<ColPrefs>(loadPrefs)
+  const [dragKey, setDragKey] = useState<string | null>(null)
+  const [overKey, setOverKey] = useState<string | null>(null)
+  const [colOffsets, setColOffsets] = useState<number[]>([])
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<SysUserRow | null>(null)
+
+  const tableAreaRef = useRef<HTMLDivElement>(null)
+  const visibleSet = useMemo(() => new Set(prefs.visible), [prefs.visible])
+  const pinnedSet = useMemo(() => new Set(prefs.pinned), [prefs.pinned])
+  const toggleableColumns = columns.filter((c) => c.key !== 'actions')
+
+  const persist = (next: ColPrefs) => {
+    setPrefs(next)
+    localStorage.setItem(COLS_STORAGE_KEY, JSON.stringify(next))
+  }
+
+  const toggleCol = (key: string, selected: boolean) => {
+    const next = new Set(visibleSet)
+    if (selected) next.add(key)
+    else next.delete(key)
+    persist({ ...prefs, visible: [...next] })
+  }
+
+  const toggleAllCols = (selected: boolean) => {
+    persist({ ...prefs, visible: selected ? toggleableColumns.map((c) => c.key) : [] })
+  }
+
+  const togglePin = (key: string) => {
+    const next = new Set(pinnedSet)
+    if (next.has(key)) next.delete(key)
+    else next.add(key)
+    persist({ ...prefs, pinned: [...next] })
+  }
+
+  const moveCol = (drag: string, over: string) => {
+    if (drag === over) return
+    const order = prefs.order.filter((k) => k !== drag)
+    order.splice(order.indexOf(over), 0, drag)
+    persist({ ...prefs, order })
+  }
+
+  // 固定列排到最前，其余按用户排序；操作列始终在最后
+  const orderedColumns = useMemo(() => {
+    const rank = new Map(prefs.order.map((k, i) => [k, i] as const))
+    return [...columns].sort((a, b) => {
+      const pa = pinnedSet.has(a.key) ? 0 : 1
+      const pb = pinnedSet.has(b.key) ? 0 : 1
+      if (pa !== pb) return pa - pb
+      return (rank.get(a.key) ?? 0) - (rank.get(b.key) ?? 0)
+    })
+  }, [prefs.order, pinnedSet])
+
+  const visibleColumns = useMemo(
+    () => orderedColumns.filter((c) => c.key === 'actions' || visibleSet.has(c.key)),
+    [orderedColumns, visibleSet],
+  )
+
+  const lastPinnedIndex = useMemo(() => {
+    for (let i = visibleColumns.length - 1; i >= 0; i--) {
+      if (pinnedSet.has(visibleColumns[i].key)) return i
+    }
+    return -1
+  }, [visibleColumns, pinnedSet])
 
   const openCreate = () => {
     setEditing(null)
@@ -118,6 +210,38 @@ export default function UserPage() {
 
   const pageSize = query.pageSize ?? PAGE_SIZE
 
+  // HeroUI v3 的 Row 子级渲染函数(columnKey)不生效，需静态 Cell；items 需自带 id
+  const rowsWithId = useMemo(
+    () => (data?.rows ?? []).map((r) => ({ ...r, id: r.user_id })),
+    [data],
+  )
+
+  // sticky 列的 left 偏移随列宽（内容/容器宽）变化，需从 DOM 实测
+  const colSignature = visibleColumns.map((c) => c.key).join(',')
+  useLayoutEffect(() => {
+    const table = tableAreaRef.current?.querySelector('table')
+    if (!table) return
+    const measure = () => {
+      const headRow = table.tHead?.rows.item(0)
+      if (!headRow) return
+      const tableLeft = table.getBoundingClientRect().left
+      setColOffsets(Array.from(headRow.cells, (th) => th.getBoundingClientRect().left - tableLeft))
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(table)
+    return () => ro.disconnect()
+  }, [colSignature, rowsWithId])
+
+  const stickyColProps = (key: string) => {
+    const i = visibleColumns.findIndex((c) => c.key === key)
+    if (i < 0 || !pinnedSet.has(key)) return {}
+    return {
+      className: `sticky z-10 ${i === lastPinnedIndex ? 'shadow-[8px_0_12px_-6px_rgba(0,0,0,0.15)]' : ''}`,
+      style: { left: colOffsets[i] ?? 0 },
+    }
+  }
+
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil((data?.total ?? 0) / pageSize)),
     [data?.total, pageSize],
@@ -129,18 +253,6 @@ export default function UserPage() {
     setJumpTo('')
   }
 
-  const toggleCol = (key: string, selected: boolean) => {
-    setVisibleCols((prev) => {
-      const next = new Set(prev)
-      if (selected) next.add(key)
-      else next.delete(key)
-      localStorage.setItem(COLS_STORAGE_KEY, JSON.stringify([...next]))
-      return next
-    })
-  }
-
-  const visibleColumns = columns.filter((c) => visibleCols.has(c.key))
-
   const search = () =>
     setQuery((q) => ({ ...q, pageNum: 1, userName: userNameInput, phonenumber: phoneInput }))
 
@@ -149,12 +261,6 @@ export default function UserPage() {
     setPhoneInput('')
     setQuery({ pageNum: 1, pageSize: PAGE_SIZE })
   }
-
-  // HeroUI v3 的 Row 子级渲染函数(columnKey)不生效，需静态 Cell；items 需自带 id
-  const rowsWithId = useMemo(
-    () => (data?.rows ?? []).map((r) => ({ ...r, id: r.user_id })),
-    [data],
-  )
 
   const renderCell = (row: SysUserRow, key: string) => {
     switch (key) {
@@ -250,24 +356,82 @@ export default function UserPage() {
               <Settings2 size={14} aria-hidden />
               列设置
             </Button>
-            <Popover.Content className="w-36">
+            <Popover.Content className="w-52">
               <div aria-label="显示列" className="flex flex-col gap-1 p-2" role="group">
-                {columns
-                  .filter((c) => c.key !== 'actions')
-                  .map((col) => (
-                    <Checkbox
+                <Checkbox
+                  isSelected={
+                    toggleableColumns.length > 0 && toggleableColumns.every((c) => visibleSet.has(c.key))
+                  }
+                  isIndeterminate={
+                    !toggleableColumns.every((c) => visibleSet.has(c.key)) &&
+                    toggleableColumns.some((c) => visibleSet.has(c.key))
+                  }
+                  onChange={toggleAllCols}
+                >
+                  <Checkbox.Content>
+                    <Checkbox.Control>
+                      <Checkbox.Indicator />
+                    </Checkbox.Control>
+                    全选
+                  </Checkbox.Content>
+                </Checkbox>
+                {toggleableColumns.map((col) => {
+                  const pinned = pinnedSet.has(col.key)
+                  return (
+                    <div
                       key={col.key}
-                      isSelected={visibleCols.has(col.key)}
-                      onChange={(selected) => toggleCol(col.key, selected)}
+                      draggable
+                      onDragStart={() => setDragKey(col.key)}
+                      onDragEnd={() => {
+                        setDragKey(null)
+                        setOverKey(null)
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault()
+                        if (col.key !== dragKey) setOverKey(col.key)
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault()
+                        if (dragKey) moveCol(dragKey, col.key)
+                        setDragKey(null)
+                        setOverKey(null)
+                      }}
+                      className={`flex items-center gap-0.5 rounded-md px-1 ${
+                        dragKey && overKey === col.key && dragKey !== col.key ? 'bg-accent-soft' : ''
+                      }`}
                     >
-                      <Checkbox.Content>
-                        <Checkbox.Control>
-                          <Checkbox.Indicator />
-                        </Checkbox.Control>
-                        {col.label}
-                      </Checkbox.Content>
-                    </Checkbox>
-                  ))}
+                      <span
+                        aria-hidden
+                        className="cursor-grab text-muted active:cursor-grabbing"
+                      >
+                        <GripVertical size={14} />
+                      </span>
+                      <Checkbox
+                        isSelected={visibleSet.has(col.key)}
+                        onChange={(selected) => toggleCol(col.key, selected)}
+                        className="flex-1"
+                      >
+                        <Checkbox.Content>
+                          <Checkbox.Control>
+                            <Checkbox.Indicator />
+                          </Checkbox.Control>
+                          {col.label}
+                        </Checkbox.Content>
+                      </Checkbox>
+                      <button
+                        type="button"
+                        aria-pressed={pinned}
+                        aria-label={pinned ? `取消固定${col.label}` : `固定${col.label}`}
+                        onClick={() => togglePin(col.key)}
+                        className={`flex size-6 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-surface-secondary ${
+                          pinned ? 'text-accent' : 'text-muted'
+                        }`}
+                      >
+                        <Pin size={13} aria-hidden className={pinned ? 'fill-current' : undefined} />
+                      </button>
+                    </div>
+                  )
+                })}
               </div>
             </Popover.Content>
           </Popover>
@@ -278,41 +442,49 @@ export default function UserPage() {
           )}
         </div>
       </div>
-      <TableRoot>
-        <TableScrollContainer>
-          <TableContent aria-label="用户列表" className="min-w-[720px]">
-            <TableHeader>
-              {visibleColumns.map((col) => (
-                <TableColumn key={col.key} id={col.key} isRowHeader={col.key === 'user_name'}>
-                  {col.label}
-                </TableColumn>
-              ))}
-            </TableHeader>
-            <TableBody
-              items={rowsWithId}
-              // RAC 会缓存行渲染结果，列集变化时需靠 dependencies 强制重建行，否则单元格数与表头不一致抛错白屏
-              dependencies={[visibleColumns]}
-              renderEmptyState={() =>
-                isPending ? (
-                  <Spinner />
-                ) : (
-                  <EmptyState className="flex flex-col items-center justify-center gap-2 py-8">
-                    <Users size={20} aria-hidden className="text-muted" />
-                    <Typography.Paragraph size="sm" color="muted">暂无数据</Typography.Paragraph>
-                  </EmptyState>
-                )
-              }
-            >
-              {(row) => (
-                <TableRow id={row.id}>
-                  {visibleColumns.map((col) => (
-                    <TableCell key={col.key}>{renderCell(row, col.key)}</TableCell>
-                  ))}
-                </TableRow>
-              )}
-            </TableBody>
-          </TableContent>
-        </TableScrollContainer>
+      <div ref={tableAreaRef}>
+        <TableRoot>
+          <TableScrollContainer>
+            <TableContent aria-label="用户列表" className="min-w-[720px]">
+              <TableHeader>
+                {visibleColumns.map((col) => (
+                  <TableColumn
+                    key={col.key}
+                    id={col.key}
+                    isRowHeader={col.key === visibleColumns[0].key}
+                    {...stickyColProps(col.key)}
+                  >
+                    {col.label}
+                  </TableColumn>
+                ))}
+              </TableHeader>
+              <TableBody
+                items={rowsWithId}
+                // RAC 会缓存行渲染结果，列集变化时需靠 dependencies 强制重建行，否则单元格数与表头不一致抛错白屏
+                dependencies={[visibleColumns]}
+                renderEmptyState={() =>
+                  isPending ? (
+                    <Spinner />
+                  ) : (
+                    <EmptyState className="flex flex-col items-center justify-center gap-2 py-8">
+                      <Users size={20} aria-hidden className="text-muted" />
+                      <Typography.Paragraph size="sm" color="muted">暂无数据</Typography.Paragraph>
+                    </EmptyState>
+                  )
+                }
+              >
+                {(row) => (
+                  <TableRow id={row.id}>
+                    {visibleColumns.map((col) => (
+                      <TableCell key={col.key} {...stickyColProps(col.key)}>
+                        {renderCell(row, col.key)}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                )}
+              </TableBody>
+            </TableContent>
+          </TableScrollContainer>
         <TableFooter>
           <PaginationRoot size="sm">
             <PaginationSummary>
@@ -400,6 +572,7 @@ export default function UserPage() {
           </PaginationRoot>
         </TableFooter>
       </TableRoot>
+      </div>
 
       <UserFormModal isOpen={formOpen} editing={editing} onClose={() => setFormOpen(false)} />
     </div>
