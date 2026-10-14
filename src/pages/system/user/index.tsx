@@ -2,8 +2,6 @@ import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import {
   Button,
-  Card,
-  CardContent,
   Checkbox,
   Chip,
   EmptyState,
@@ -278,6 +276,8 @@ export default function UserPage() {
         )
       case 'actions':
         return <RowActions row={row} onEdit={openEdit} />
+      case 'create_time':
+        return <span>{String(row.create_time ?? '—').replace('T', ' ').slice(0, 19)}</span>
       default:
         return <span>{String((row as unknown as Record<string, unknown>)[key] ?? '—')}</span>
     }
@@ -285,11 +285,11 @@ export default function UserPage() {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardContent className="flex flex-row flex-wrap items-end gap-3">
+      <div ref={tableAreaRef}>
+        <TableRoot>
+          <div className="flex flex-row flex-wrap items-end gap-3 border-b border-separator px-4 pb-4 pt-4">
           <SearchField
             aria-label="按账号搜索"
-            variant="secondary"
             value={userNameInput}
             onChange={setUserNameInput}
             onSubmit={search}
@@ -304,7 +304,6 @@ export default function UserPage() {
           </SearchField>
           <SearchField
             aria-label="按手机号搜索"
-            variant="secondary"
             value={phoneInput}
             onChange={setPhoneInput}
             onSubmit={search}
@@ -319,7 +318,6 @@ export default function UserPage() {
           </SearchField>
           <SelectRoot
             aria-label="部门"
-            variant="secondary"
             className="w-48"
             selectedKey={query.deptId ? String(query.deptId) : null}
             onSelectionChange={(key) => {
@@ -352,10 +350,9 @@ export default function UserPage() {
             <RotateCcw size={14} aria-hidden />
             重置
           </Button>
-        </CardContent>
-      </Card>
+          </div>
 
-      <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between px-4 pb-3 pt-4">
         <Typography.Heading level={6}>用户列表</Typography.Heading>
         <div className="flex items-center gap-2">
           <Popover>
@@ -449,8 +446,6 @@ export default function UserPage() {
           )}
         </div>
       </div>
-      <div ref={tableAreaRef}>
-        <TableRoot>
           <TableScrollContainer>
             <TableContent aria-label="用户列表" className="min-w-[720px]">
               <TableHeader>
@@ -578,7 +573,7 @@ export default function UserPage() {
               </PaginationContent>
           </PaginationRoot>
         </TableFooter>
-      </TableRoot>
+        </TableRoot>
       </div>
 
       <UserFormModal isOpen={formOpen} editing={editing} onClose={() => setFormOpen(false)} />
