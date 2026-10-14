@@ -180,6 +180,12 @@ export default function UserPage() {
     [orderedColumns, visibleSet],
   )
 
+  // 弹层列表用显示顺序渲染，拖拽后与表格保持一致
+  const popoverColumns = useMemo(
+    () => orderedColumns.filter((c) => c.key !== 'actions'),
+    [orderedColumns],
+  )
+
   const lastPinnedIndex = useMemo(() => {
     for (let i = visibleColumns.length - 1; i >= 0; i--) {
       if (pinnedSet.has(visibleColumns[i].key)) return i
@@ -375,7 +381,7 @@ export default function UserPage() {
                     全选
                   </Checkbox.Content>
                 </Checkbox>
-                {toggleableColumns.map((col) => {
+                {popoverColumns.map((col) => {
                   const pinned = pinnedSet.has(col.key)
                   return (
                     <div
