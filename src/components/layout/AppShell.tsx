@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { Tooltip, TooltipContent, TooltipTrigger, Typography } from '@heroui/react'
+import { Tooltip, TooltipContent, TooltipTrigger, Typography, Breadcrumbs } from '@heroui/react'
 import {
   Home,
   LayoutGrid,
@@ -21,6 +21,15 @@ const navItems = [
   { path: '/system/user', label: '用户管理', icon: Users, group: '系统管理' },
 ]
 
+function breadcrumbsFor(pathname: string) {
+  const item = navItems.find((n) => n.path === pathname)
+  if (!item) return []
+  const crumbs: { label: string; path?: string }[] = []
+  if (item.group) crumbs.push({ label: item.group })
+  crumbs.push({ label: item.label, path: item.path })
+  return crumbs
+}
+
 export default function AppShell() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -28,6 +37,7 @@ export default function AppShell() {
   const clear = useAuthStore((s) => s.clear)
   const theme = useThemeStore((s) => s.theme)
   const setTheme = useThemeStore((s) => s.setTheme)
+  const crumbs = breadcrumbsFor(location.pathname)
 
   const [collapsed, setCollapsed] = useState(
     () => localStorage.getItem('sidebar-collapsed') === '1',
@@ -135,6 +145,18 @@ export default function AppShell() {
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-16 items-center justify-end gap-3 border-b border-separator bg-surface px-6">
+          {crumbs.length > 0 && (
+            <Breadcrumbs className="mr-auto">
+              {crumbs.map((crumb) => (
+                <Breadcrumbs.Item
+                  key={crumb.label}
+                  onPress={crumb.path ? () => navigate(crumb.path!) : undefined}
+                >
+                  {crumb.label}
+                </Breadcrumbs.Item>
+              ))}
+            </Breadcrumbs>
+          )}
           <div
             role="radiogroup"
             aria-label="主题模式"
