@@ -90,7 +90,7 @@ export default function AppShell() {
   return (
     <div className="flex h-screen bg-background">
       <aside
-        className={`flex shrink-0 flex-col border-r border-separator bg-surface transition-[width] duration-200 ${
+        className={`flex shrink-0 flex-col border-r border-separator bg-background transition-[width] duration-200 ${
           collapsed ? 'w-12' : 'w-56'
         }`}
       >
@@ -144,7 +144,7 @@ export default function AppShell() {
         </div>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 items-center justify-end gap-3 border-b border-separator bg-surface px-6">
+        <header className="flex h-16 items-center justify-end gap-3 border-b border-separator bg-background px-6">
           <div
             role="radiogroup"
             aria-label="主题模式"

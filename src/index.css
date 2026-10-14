@@ -3,3 +3,8 @@
 
 /* HeroUI v3 暗色主题由根节点 .dark 类驱动；把 Tailwind 的 dark: 变体也绑到类策略保持一致 */
 @custom-variant dark (&:where(.dark, .dark *));
+
+/* 全局画布调深一档（对齐 heroui.com 的浅灰色调，zinc-100），仅覆盖浅色主题 */
+:root:not(.dark) {
+  --background: oklch(0.967 0.001 286.375);
+}
