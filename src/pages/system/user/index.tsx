@@ -319,6 +319,7 @@ export default function UserPage() {
           </SearchField>
           <SelectRoot
             aria-label="部门"
+            variant="secondary"
             className="w-48"
             selectedKey={query.deptId ? String(query.deptId) : null}
             onSelectionChange={(key) => {
@@ -347,7 +348,7 @@ export default function UserPage() {
             <Search size={14} aria-hidden />
             搜索
           </Button>
-          <Button variant="secondary" onPress={reset}>
+          <Button variant="ghost" onPress={reset}>
             <RotateCcw size={14} aria-hidden />
             重置
           </Button>
@@ -358,7 +359,7 @@ export default function UserPage() {
         <Typography.Heading level={6}>用户列表</Typography.Heading>
         <div className="flex items-center gap-2">
           <Popover>
-            <Button variant="secondary" aria-label="列设置">
+            <Button variant="ghost" aria-label="列设置">
               <Settings2 size={14} aria-hidden />
               列设置
             </Button>
