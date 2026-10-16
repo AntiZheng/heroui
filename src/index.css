@@ -8,3 +8,94 @@
 :root:not(.dark) {
   --background: oklch(0.967 0.001 286.375);
 }
+
+/* HeroUI Tooltip 默认 --tooltip-delay 为 1500ms，悬停需等 1.5s 才弹出；调到 300ms 即时反馈 */
+:root,
+.dark {
+  --tooltip-delay: 300ms;
+}
+
+/* secondary 表格行白底恢复到单元格层：行背景铺在 tr 上会把首末行单元格圆角填成直角，
+   而 secondary 变体的单元格自带 bg-transparent。此处声明在 @heroui/styles 之后，
+   hover/选中态需在此重声明以保住优先级（非分层样式按源顺序覆盖组件样式） */
+.table-root--secondary .table__row .table__cell {
+  @apply bg-surface;
+}
+.table-root--secondary .table__row:is(:hover, [data-hovered='true']) .table__cell {
+  @apply bg-default/50;
+}
+.table-root--secondary .table__row[data-selected='true'] .table__cell {
+  @apply bg-surface/10;
+}
+
+/* MapLibre 封装覆盖：popup 外壳去默认样式由内容 div 自绘；marker 容器清理 maplibre 默认定位样式 */
+.maplibregl-popup.map-popup-shell .maplibregl-popup-content {
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 12px;
+}
+.maplibregl-popup.map-popup-shell .maplibregl-popup-tip {
+  border: none;
+}
+.maplibregl-popup.map-popup-shell {
+  z-index: 20;
+}
+.map-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.maplibregl-ctrl.map-controls-host {
+  background: transparent;
+  box-shadow: none;
+}
+
+/* attribution 适配暗色：默认白底在暗色地球上突兀 */
+.maplibregl-ctrl-attrib.maplibregl-compact {
+  border-radius: 8px !important;
+}
+.dark .maplibregl-ctrl-attrib {
+  background: rgba(20, 20, 24, 0.72);
+}
+.dark .maplibregl-ctrl-attrib,
+.dark .maplibregl-ctrl-attrib a {
+  color: oklch(0.85 0.005 286);
+}
+.dark .maplibregl-ctrl-attrib-button {
+  filter: invert(1);
+}
+
+/* 全局按钮字号压到 12px：HeroUI .button 基类默认 text-sm（14px） */
+.button {
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+/* 面包屑字号 13px：HeroUI .breadcrumbs__link 基类默认 text-sm（14px），
+   根元素上的字号类作用不到链接元素，需直接覆盖基类 */
+.breadcrumbs__link {
+  font-size: 13px;
+  line-height: 1.1rem;
+}
+
+/* 搜索框输入字号压到 12px：HeroUI .search-field__input 基类默认 text-base / sm:text-sm */
+.search-field__input {
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+/* 表格行高压缩一档：单元格与表头的上下内边距 10px→8px（HeroUI 默认 py-2.5） */
+.table__cell,
+.table__column {
+  padding-block: 0.5rem;
+}
+
+/* 行高压缩后 16px 圆角占行高比例过大（44px→36px 行高），交界弧线显陡产生割裂感；
+   首行上圆角降到 10px 适配新行高（底部圆角不变） */
+.table__body tr:first-child td:first-child {
+  border-start-start-radius: 10px;
+}
+.table__body tr:first-child td:last-child {
+  border-start-end-radius: 10px;
+}

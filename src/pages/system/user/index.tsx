@@ -1,8 +1,8 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import type { Selection } from 'react-aria-components'
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Button,
-  Checkbox,
   Chip,
   EmptyState,
   Input,
@@ -19,7 +19,6 @@ import {
   PaginationPreviousIcon,
   PaginationRoot,
   PaginationSummary,
-  Popover,
   SearchField,
   SelectIndicator,
   SelectPopover,
@@ -31,16 +30,21 @@ import {
   TableCell,
   TableColumn,
   TableContent,
-  TableFooter,
   TableHeader,
   TableRoot,
   TableRow,
   TableScrollContainer,
   Typography,
+  toast,
 } from '@heroui/react'
-import { GripVertical, Pin, RotateCcw, Search, Settings2, Users } from 'lucide-react'
-import { getDeptTree, getUserList } from '../../../api/user'
+import { RotateCcw, Search, Trash2, UserPlus, Users } from 'lucide-react'
+import { deleteUsers, getDeptTree, getUserList } from '../../../api/user'
 import { hasPermission } from '../../../stores/auth'
+import BatchDeleteDialog from '../../../components/BatchDeleteDialog'
+import { ColumnSettings, useColPrefs, useStickyColumns } from '../../../components/ColumnSettings'
+import TableCornerOverlays from '../../../components/TableCornerOverlays'
+import SelectionCheckbox from '../../../components/SelectionCheckbox'
+import PageSizeStepper from '../../../components/PageSizeStepper'
 import { flattenDeptTree } from './deptTree'
 import RowActions from './RowActions'
 import UserFormModal from './UserFormModal'
@@ -71,125 +75,25 @@ const columns = [
   { key: 'actions', label: '操作' },
 ]
 
-const COLS_STORAGE_KEY = 'user-table-cols'
-
-interface ColPrefs {
-  order: string[]
-  visible: string[]
-  pinned: string[]
-}
-
-const DEFAULT_PREFS: ColPrefs = {
-  order: columns.map((c) => c.key),
-  visible: columns.map((c) => c.key),
-  pinned: [],
-}
-
-function loadPrefs(): ColPrefs {
-  try {
-    const raw = localStorage.getItem(COLS_STORAGE_KEY)
-    if (raw) {
-      const parsed: unknown = JSON.parse(raw)
-      // 旧版格式为纯数组（可见列列表），迁移到新结构
-      if (Array.isArray(parsed)) {
-        const keys = parsed.filter((k) => columns.some((c) => c.key === k))
-        return { ...DEFAULT_PREFS, visible: keys }
-      }
-      if (parsed && typeof parsed === 'object') {
-        const p = parsed as Partial<ColPrefs>
-        const order = [...(p.order ?? DEFAULT_PREFS.order)].filter((k) =>
-          columns.some((c) => c.key === k),
-        )
-        for (const c of columns) if (!order.includes(c.key)) order.push(c.key)
-        const known = new Set(order)
-        return {
-          order,
-          visible: (p.visible ?? []).filter((k) => known.has(k)),
-          pinned: (p.pinned ?? []).filter((k) => known.has(k)),
-        }
-      }
-    }
-  } catch {
-    // 存储损坏时回退默认
-  }
-  return DEFAULT_PREFS
-}
-
 export default function UserPage() {
+  const queryClient = useQueryClient()
   const [query, setQuery] = useState<UserListQuery>({ pageNum: 1, pageSize: PAGE_SIZE })
   const [userNameInput, setUserNameInput] = useState('')
   const [phoneInput, setPhoneInput] = useState('')
   const [jumpTo, setJumpTo] = useState('')
-  const [prefs, setPrefs] = useState<ColPrefs>(loadPrefs)
-  const [dragKey, setDragKey] = useState<string | null>(null)
-  const [overKey, setOverKey] = useState<string | null>(null)
-  const [colOffsets, setColOffsets] = useState<number[]>([])
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<SysUserRow | null>(null)
+  const [selected, setSelected] = useState<Selection>(new Set())
+  const [batchOpen, setBatchOpen] = useState(false)
 
   const tableAreaRef = useRef<HTMLDivElement>(null)
-  const visibleSet = useMemo(() => new Set(prefs.visible), [prefs.visible])
-  const pinnedSet = useMemo(() => new Set(prefs.pinned), [prefs.pinned])
-  const toggleableColumns = columns.filter((c) => c.key !== 'actions')
-
-  const persist = (next: ColPrefs) => {
-    setPrefs(next)
-    localStorage.setItem(COLS_STORAGE_KEY, JSON.stringify(next))
-  }
-
-  const toggleCol = (key: string, selected: boolean) => {
-    const next = new Set(visibleSet)
-    if (selected) next.add(key)
-    else next.delete(key)
-    persist({ ...prefs, visible: [...next] })
-  }
-
-  const toggleAllCols = (selected: boolean) => {
-    persist({ ...prefs, visible: selected ? toggleableColumns.map((c) => c.key) : [] })
-  }
-
-  const togglePin = (key: string) => {
-    const next = new Set(pinnedSet)
-    if (next.has(key)) next.delete(key)
-    else next.add(key)
-    persist({ ...prefs, pinned: [...next] })
-  }
-
-  const moveCol = (drag: string, over: string) => {
-    if (drag === over) return
-    const order = prefs.order.filter((k) => k !== drag)
-    order.splice(order.indexOf(over), 0, drag)
-    persist({ ...prefs, order })
-  }
-
-  // 固定列排到最前，其余按用户排序；操作列始终在最后
-  const orderedColumns = useMemo(() => {
-    const rank = new Map(prefs.order.map((k, i) => [k, i] as const))
-    return [...columns].sort((a, b) => {
-      const pa = pinnedSet.has(a.key) ? 0 : 1
-      const pb = pinnedSet.has(b.key) ? 0 : 1
-      if (pa !== pb) return pa - pb
-      return (rank.get(a.key) ?? 0) - (rank.get(b.key) ?? 0)
-    })
-  }, [prefs.order, pinnedSet])
-
-  const visibleColumns = useMemo(
-    () => orderedColumns.filter((c) => c.key === 'actions' || visibleSet.has(c.key)),
-    [orderedColumns, visibleSet],
-  )
-
-  // 弹层列表用显示顺序渲染，拖拽后与表格保持一致
-  const popoverColumns = useMemo(
-    () => orderedColumns.filter((c) => c.key !== 'actions'),
-    [orderedColumns],
-  )
-
-  const lastPinnedIndex = useMemo(() => {
-    for (let i = visibleColumns.length - 1; i >= 0; i--) {
-      if (pinnedSet.has(visibleColumns[i].key)) return i
-    }
-    return -1
-  }, [visibleColumns, pinnedSet])
+  const colCtrl = useColPrefs({ storageKey: 'user-table-cols', columns, fixedKeys: ['actions'] })
+  const visibleColumns = colCtrl.visibleColumns
+  const { stickyColProps } = useStickyColumns({
+    containerRef: tableAreaRef,
+    visibleColumns,
+    pinnedSet: colCtrl.pinnedSet,
+  })
 
   const openCreate = () => {
     setEditing(null)
@@ -220,33 +124,25 @@ export default function UserPage() {
     [data],
   )
 
-  // sticky 列的 left 偏移随列宽（内容/容器宽）变化，需从 DOM 实测
-  const colSignature = visibleColumns.map((c) => c.key).join(',')
-  useLayoutEffect(() => {
-    const table = tableAreaRef.current?.querySelector('table')
-    if (!table) return
-    const measure = () => {
-      const headRow = table.tHead?.rows.item(0)
-      if (!headRow) return
-      const tableLeft = table.getBoundingClientRect().left
-      setColOffsets(Array.from(headRow.cells, (th) => th.getBoundingClientRect().left - tableLeft))
-    }
-    measure()
-    const ro = new ResizeObserver(measure)
-    ro.observe(table)
-    return () => ro.disconnect()
-  }, [colSignature, rowsWithId])
+  const batchCount = selected === 'all' ? rowsWithId.length : selected.size
 
-  // secondary 变体的单元格透明，sticky 固定列需补不透明背景
-  const stickyColProps = (key: string, isHeader: boolean) => {
-    const i = visibleColumns.findIndex((c) => c.key === key)
-    if (i < 0 || !pinnedSet.has(key)) return {}
-    return {
-      className: `sticky z-10 ${isHeader ? 'bg-surface-secondary' : 'bg-field'} ${
-        i === lastPinnedIndex ? 'shadow-[8px_0_12px_-6px_rgba(0,0,0,0.15)]' : ''
-      }`,
-      style: { left: colOffsets[i] ?? 0 },
+  // 翻页/搜索/重置后清空勾选，避免残留跨页选择
+  useEffect(() => {
+    setSelected(new Set())
+  }, [query])
+
+  const handleBatchDelete = async () => {
+    const ids = (selected === 'all' ? rowsWithId.map((r) => r.id) : Array.from(selected)).map(Number)
+    if (ids.length === 0) return
+    try {
+      await deleteUsers(ids)
+    } catch {
+      return
     }
+    toast('成功', { description: '删除成功', variant: 'success' })
+    setSelected(new Set())
+    queryClient.invalidateQueries({ queryKey: ['user-list'] })
+    queryClient.invalidateQueries({ queryKey: ['user-total'] })
   }
 
   const totalPages = useMemo(
@@ -273,7 +169,7 @@ export default function UserPage() {
     switch (key) {
       case 'status':
         return (
-          <Chip color={row.status === '0' ? 'success' : 'default'} size="sm">
+          <Chip color={row.status === '0' ? 'success' : 'danger'} size="sm" variant="soft">
             {row.status === '0' ? '正常' : '停用'}
           </Chip>
         )
@@ -287,10 +183,8 @@ export default function UserPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div ref={tableAreaRef}>
-        <TableRoot variant="secondary">
-          <div className="flex flex-row flex-wrap items-end gap-3 border-b border-separator px-4 pb-4 pt-4">
+    <div className="flex h-full min-h-0 flex-col gap-6">
+      <div className="flex flex-row flex-wrap items-end gap-3 border-b border-separator pb-4">
           <SearchField
             aria-label="按账号搜索"
             value={userNameInput}
@@ -301,7 +195,7 @@ export default function UserPage() {
             <Label className="text-xs font-medium text-muted">账号</Label>
             <SearchField.Group>
               <SearchField.SearchIcon />
-              <SearchField.Input placeholder="回车搜索" className="text-sm!" />
+              <SearchField.Input placeholder="回车搜索" className="text-xs!" />
               <SearchField.ClearButton />
             </SearchField.Group>
           </SearchField>
@@ -315,7 +209,7 @@ export default function UserPage() {
             <Label className="text-xs font-medium text-muted">手机号</Label>
             <SearchField.Group>
               <SearchField.SearchIcon />
-              <SearchField.Input placeholder="回车搜索" className="text-sm!" />
+              <SearchField.Input placeholder="回车搜索" className="text-xs!" />
               <SearchField.ClearButton />
             </SearchField.Group>
           </SearchField>
@@ -330,7 +224,7 @@ export default function UserPage() {
           >
             <Label className="text-xs font-medium text-muted">部门</Label>
             <SelectTrigger>
-              <SelectValue className="text-sm!">
+              <SelectValue className="text-xs!">
                 {({ isPlaceholder, defaultChildren }) =>
                   isPlaceholder ? <span className="text-muted">全部部门</span> : defaultChildren
                 }
@@ -345,114 +239,54 @@ export default function UserPage() {
               </ListBox>
             </SelectPopover>
           </SelectRoot>
-          <Button variant="primary" onPress={search} className="ml-auto">
+          <Button variant="primary" size="sm" onPress={search} className="ml-auto">
             <Search size={14} aria-hidden />
             搜索
           </Button>
-          <Button variant="ghost" onPress={reset}>
+          <Button variant="ghost" size="sm" onPress={reset}>
             <RotateCcw size={14} aria-hidden />
             重置
           </Button>
-          </div>
-
-          <div className="flex items-center justify-between px-4 pb-3 pt-4">
-        <Typography.Heading level={6}>用户列表</Typography.Heading>
+      </div>
+      <div className="flex items-center justify-between">
+        <Typography.Heading level={6} className="text-xs">用户列表</Typography.Heading>
         <div className="flex items-center gap-2">
-          <Popover>
-            <Button variant="ghost" aria-label="列设置">
-              <Settings2 size={14} aria-hidden />
-              列设置
+          {hasPermission('system:user:remove') && (
+            <Button
+              variant="danger"
+              size="sm"
+              isDisabled={batchCount === 0}
+              onPress={() => setBatchOpen(true)}
+            >
+              <Trash2 size={14} aria-hidden />
+              批量删除{batchCount > 0 ? `（${batchCount}）` : ''}
             </Button>
-            <Popover.Content className="w-52">
-              <div aria-label="显示列" className="flex flex-col gap-1 p-2" role="group">
-                <Checkbox
-                  isSelected={
-                    toggleableColumns.length > 0 && toggleableColumns.every((c) => visibleSet.has(c.key))
-                  }
-                  isIndeterminate={
-                    !toggleableColumns.every((c) => visibleSet.has(c.key)) &&
-                    toggleableColumns.some((c) => visibleSet.has(c.key))
-                  }
-                  onChange={toggleAllCols}
-                >
-                  <Checkbox.Content>
-                    <Checkbox.Control>
-                      <Checkbox.Indicator />
-                    </Checkbox.Control>
-                    全选
-                  </Checkbox.Content>
-                </Checkbox>
-                {popoverColumns.map((col) => {
-                  const pinned = pinnedSet.has(col.key)
-                  return (
-                    <div
-                      key={col.key}
-                      draggable
-                      onDragStart={() => setDragKey(col.key)}
-                      onDragEnd={() => {
-                        setDragKey(null)
-                        setOverKey(null)
-                      }}
-                      onDragOver={(e) => {
-                        e.preventDefault()
-                        if (col.key !== dragKey) setOverKey(col.key)
-                      }}
-                      onDrop={(e) => {
-                        e.preventDefault()
-                        if (dragKey) moveCol(dragKey, col.key)
-                        setDragKey(null)
-                        setOverKey(null)
-                      }}
-                      className={`flex items-center gap-0.5 rounded-md px-1 ${
-                        dragKey && overKey === col.key && dragKey !== col.key ? 'bg-accent-soft' : ''
-                      }`}
-                    >
-                      <span
-                        aria-hidden
-                        className="cursor-grab text-muted active:cursor-grabbing"
-                      >
-                        <GripVertical size={14} />
-                      </span>
-                      <Checkbox
-                        isSelected={visibleSet.has(col.key)}
-                        onChange={(selected) => toggleCol(col.key, selected)}
-                        className="flex-1"
-                      >
-                        <Checkbox.Content>
-                          <Checkbox.Control>
-                            <Checkbox.Indicator />
-                          </Checkbox.Control>
-                          {col.label}
-                        </Checkbox.Content>
-                      </Checkbox>
-                      <button
-                        type="button"
-                        aria-pressed={pinned}
-                        aria-label={pinned ? `取消固定${col.label}` : `固定${col.label}`}
-                        onClick={() => togglePin(col.key)}
-                        className={`flex size-6 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-surface-secondary ${
-                          pinned ? 'text-accent' : 'text-muted'
-                        }`}
-                      >
-                        <Pin size={13} aria-hidden className={pinned ? 'fill-current' : undefined} />
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
-            </Popover.Content>
-          </Popover>
+          )}
           {hasPermission('system:user:add') && (
-            <Button variant="primary" onPress={openCreate}>
+            <Button variant="primary" size="sm" onPress={openCreate}>
+              <UserPlus size={14} aria-hidden />
               新增用户
             </Button>
           )}
+          <ColumnSettings ctrl={colCtrl} />
         </div>
       </div>
-          <div className="mx-4 overflow-hidden rounded-2xl border border-separator">
-            <TableScrollContainer>
-            <TableContent aria-label="用户列表" className="min-w-[720px]">
-              <TableHeader>
+      <div ref={tableAreaRef} className="flex min-h-0 flex-col">
+        <TableRoot className="flex! min-h-0 flex-col shadow-sm">
+          <TableScrollContainer className="min-h-0 flex-1 overflow-y-auto rounded-2xl">
+          <TableCornerOverlays />
+            <TableContent
+              aria-label="用户列表"
+              className="min-w-[720px]"
+              selectionMode="multiple"
+              selectionBehavior="toggle"
+              selectedKeys={selected}
+              onSelectionChange={setSelected}
+            >
+              <TableHeader className="sticky top-0 z-20 bg-surface-secondary">
+                <TableColumn id="__select" className="pe-0!">
+                  <SelectionCheckbox label="全选" />
+                </TableColumn>
                 {visibleColumns.map((col) => (
                   <TableColumn
                     key={col.key}
@@ -480,7 +314,10 @@ export default function UserPage() {
                 }
               >
                 {(row) => (
-                  <TableRow id={row.id} className="bg-field">
+                  <TableRow id={row.id}>
+                    <TableCell key="__select" className="pe-0!">
+                      <SelectionCheckbox label={`选择 ${row.user_name}`} />
+                    </TableCell>
                     {visibleColumns.map((col) => (
                       <TableCell key={col.key} {...stickyColProps(col.key, false)}>
                         {renderCell(row, col.key)}
@@ -491,38 +328,18 @@ export default function UserPage() {
               </TableBody>
             </TableContent>
           </TableScrollContainer>
-          </div>
-        <TableFooter>
+        </TableRoot>
+      </div>
+      <div className="flex items-center">
           <PaginationRoot size="sm">
             <PaginationSummary>
               {data?.total
                 ? `第 ${(query.pageNum - 1) * pageSize + 1} 至 ${Math.min(query.pageNum * pageSize, data.total)} 条，共 ${data.total} 条`
                 : '共 0 条'}
-              <SelectRoot
-                aria-label="每页条数"
-                className="w-24"
-                selectedKey={String(pageSize)}
-                onSelectionChange={(key) => {
-                  const k = key as string | null
-                  if (k) setQuery((q) => ({ ...q, pageNum: 1, pageSize: Number(k) }))
-                }}
-              >
-                <SelectTrigger className="h-7! min-h-0! items-center! rounded-3xl! border-transparent! bg-transparent! px-2! py-0! text-xs! font-medium! shadow-none! hover:border-transparent! hover:bg-default-hover!">
-                  <SelectValue className="text-xs!">
-                    {({ isPlaceholder, defaultChildren }) =>
-                      isPlaceholder ? <span>{pageSize} 条/页</span> : defaultChildren
-                    }
-                  </SelectValue>
-                  <SelectIndicator />
-                </SelectTrigger>
-                <SelectPopover>
-                  <ListBox>
-                    {[10, 20, 50].map((n) => (
-                      <ListBoxItem key={String(n)} id={String(n)}>{n} 条/页</ListBoxItem>
-                    ))}
-                  </ListBox>
-                </SelectPopover>
-              </SelectRoot>
+              <PageSizeStepper
+                pageSize={pageSize}
+                onChange={(n) => setQuery((q) => ({ ...q, pageNum: 1, pageSize: n }))}
+              />
             </PaginationSummary>
             <PaginationContent>
                 <PaginationItem>
@@ -577,11 +394,17 @@ export default function UserPage() {
                 </PaginationItem>
               </PaginationContent>
           </PaginationRoot>
-        </TableFooter>
-        </TableRoot>
       </div>
 
       <UserFormModal isOpen={formOpen} editing={editing} onClose={() => setFormOpen(false)} />
+
+      <BatchDeleteDialog
+        isOpen={batchOpen}
+        count={batchCount}
+        label="用户"
+        onClose={() => setBatchOpen(false)}
+        onConfirm={handleBatchDelete}
+      />
     </div>
   )
 }

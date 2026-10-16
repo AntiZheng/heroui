@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { KeyRound, SquarePen, Trash2 } from 'lucide-react'
 import {
   AlertDialog,
   Button,
@@ -37,6 +38,7 @@ export default function RowActions({ row, onEdit }: Props) {
   const [status, setStatus] = useState(row.status)
   const resetState = useOverlayState()
   const [newPwd, setNewPwd] = useState('')
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['user-list'] })
@@ -91,8 +93,8 @@ export default function RowActions({ row, onEdit }: Props) {
       {hasPermission('system:user:edit') && (
         <Tooltip>
           <TooltipTrigger>
-            <Button size="sm" variant="ghost" onPress={() => onEdit(row)}>
-              编辑
+            <Button size="sm" variant="tertiary" isIconOnly className="rounded-full!" onPress={() => onEdit(row)} aria-label="编辑">
+              <SquarePen size={14} aria-hidden />
             </Button>
           </TooltipTrigger>
           <TooltipContent>编辑</TooltipContent>
@@ -101,43 +103,60 @@ export default function RowActions({ row, onEdit }: Props) {
       {hasPermission('system:user:resetPwd') && (
         <Tooltip>
           <TooltipTrigger>
-            <Button size="sm" variant="ghost" onPress={resetState.open}>
-              重置密码
+            <Button size="sm" variant="tertiary" isIconOnly className="rounded-full!" onPress={resetState.open} aria-label="重置密码">
+              <KeyRound size={14} aria-hidden />
             </Button>
           </TooltipTrigger>
           <TooltipContent>重置密码</TooltipContent>
         </Tooltip>
       )}
       {hasPermission('system:user:remove') && (
-        <AlertDialog>
-          <Button size="sm" variant="danger">
-            删除
-          </Button>
-          <AlertDialog.Backdrop>
-            <AlertDialog.Container>
-              <AlertDialog.Dialog className="sm:max-w-[400px]">
-                <AlertDialog.CloseTrigger />
-                <AlertDialog.Header>
-                  <AlertDialog.Icon status="danger" />
-                  <AlertDialog.Heading>删除用户？</AlertDialog.Heading>
-                </AlertDialog.Header>
-                <AlertDialog.Body>
-                  <p>
-                    确定删除用户「{row.user_name}」吗？该操作不可撤销。
-                  </p>
-                </AlertDialog.Body>
-                <AlertDialog.Footer>
-                  <Button slot="close" variant="tertiary">
-                    取消
-                  </Button>
-                  <Button slot="close" variant="danger" onPress={handleDelete}>
-                    删除
-                  </Button>
-                </AlertDialog.Footer>
-              </AlertDialog.Dialog>
-            </AlertDialog.Container>
-          </AlertDialog.Backdrop>
-        </AlertDialog>
+        <>
+          <Tooltip>
+            <TooltipTrigger>
+              <Button
+                size="sm"
+                variant="danger-soft"
+                isIconOnly
+                className="rounded-full!"
+                onPress={() => setDeleteOpen(true)}
+                aria-label="删除"
+              >
+                <Trash2 size={14} aria-hidden />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>删除</TooltipContent>
+          </Tooltip>
+          <AlertDialog
+            isOpen={deleteOpen}
+            onOpenChange={(isOpen) => {
+              if (!isOpen) setDeleteOpen(false)
+            }}
+          >
+            <AlertDialog.Backdrop>
+              <AlertDialog.Container>
+                <AlertDialog.Dialog className="sm:max-w-[400px]">
+                  <AlertDialog.CloseTrigger />
+                  <AlertDialog.Header>
+                    <AlertDialog.Icon status="danger" />
+                    <AlertDialog.Heading>删除用户？</AlertDialog.Heading>
+                  </AlertDialog.Header>
+                  <AlertDialog.Body>
+                    <p>确定删除用户「{row.user_name}」吗？该操作不可撤销。</p>
+                  </AlertDialog.Body>
+                  <AlertDialog.Footer>
+                    <Button slot="close" variant="tertiary">
+                      取消
+                    </Button>
+                    <Button slot="close" variant="danger" onPress={handleDelete}>
+                      删除
+                    </Button>
+                  </AlertDialog.Footer>
+                </AlertDialog.Dialog>
+              </AlertDialog.Container>
+            </AlertDialog.Backdrop>
+          </AlertDialog>
+        </>
       )}
       <ModalRoot state={resetState}>
         <ModalBackdrop>

@@ -13,6 +13,8 @@ import {
 } from '@heroui/react'
 import { getCaptcha, login, getInfo } from '../../api/auth'
 import { useAuthStore } from '../../stores/auth'
+import GlassTilt from '../../components/GlassTilt'
+import glassBg from '../../assets/hero-glass-bg.webp'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -57,34 +59,31 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex h-screen">
-      <div className="relative hidden flex-1 flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-accent via-accent/90 to-accent/70 lg:flex">
-        <div className="absolute -left-24 -top-24 size-96 rounded-full bg-white/10 blur-2xl" aria-hidden />
-        <div className="absolute -bottom-32 -right-16 h-[28rem] w-[28rem] rounded-full bg-white/10 blur-3xl" aria-hidden />
-        <Typography.Heading level={1} className="relative text-accent-foreground">
-          Admin 管理平台
-        </Typography.Heading>
-        <p className="relative mt-4 text-accent-foreground/80">HeroUI × FastAPI 最小验证版</p>
-      </div>
-      <div className="flex flex-1 items-center justify-center">
-        <Card className="w-full max-w-sm">
+    <div className="relative flex h-screen items-center justify-center overflow-hidden">
+      <img src={glassBg} alt="" aria-hidden className="absolute inset-0 size-full object-cover" />
+      <div aria-hidden className="absolute inset-0 bg-black/0 dark:bg-black/40" />
+      <GlassTilt className="w-full max-w-sm rounded-[20px]">
+        <Card
+          variant="transparent"
+          className="rounded-[20px] border border-white/60 bg-background/70 [box-shadow:0_210px_218px_0_rgba(0,0,0,0.07),0_26px_27px_0_rgba(0,0,0,0.04)] backdrop-blur-xl"
+        >
           <CardContent className="flex flex-col gap-4 p-8">
-            <Typography.Heading level={3}>欢迎回来</Typography.Heading>
+            <Typography.Heading level={3} className="text-center">欢迎回来</Typography.Heading>
             <Form className="flex flex-col gap-4" onSubmit={handleSubmit}>
               <TextField value={username} onChange={setUsername} name="username" isRequired>
                 <Label>账号</Label>
-                <Input placeholder="请输入账号" autoComplete="username" />
+                <Input placeholder="请输入账号" autoComplete="username" className="bg-white/40! backdrop-blur-sm" />
                 <FieldError />
               </TextField>
               <TextField value={password} onChange={setPassword} name="password" isRequired>
                 <Label>密码</Label>
-                <Input type="password" placeholder="请输入密码" autoComplete="current-password" />
+                <Input type="password" placeholder="请输入密码" autoComplete="current-password" className="bg-white/40! backdrop-blur-sm" />
                 <FieldError />
               </TextField>
               <div className="flex items-end gap-2">
                 <TextField value={code} onChange={setCode} name="code" isRequired className="flex-1">
                   <Label>验证码</Label>
-                  <Input placeholder="请输入验证码" autoComplete="off" />
+                  <Input placeholder="请输入验证码" autoComplete="off" className="bg-white/40! backdrop-blur-sm" />
                   <FieldError />
                 </TextField>
                 {captcha.img ? (
@@ -101,13 +100,13 @@ export default function LoginPage() {
                   </Button>
                 )}
               </div>
-              <Button type="submit" variant="primary" isPending={submitting}>
+              <Button type="submit" variant="primary" size="sm" isPending={submitting}>
                 登 录
               </Button>
             </Form>
           </CardContent>
         </Card>
-      </div>
+      </GlassTilt>
     </div>
   )
 }

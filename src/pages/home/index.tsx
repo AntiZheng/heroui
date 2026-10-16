@@ -10,6 +10,8 @@ import {
 import { getUserList } from '../../api/user'
 import request from '../../api/request'
 import { useAuthStore } from '../../stores/auth'
+import GlassTilt from '../../components/GlassTilt'
+import glassBg from '../../assets/hero-glass-bg.webp'
 import type { ServerInfo } from '../../types/user'
 
 function greeting(): string {
@@ -43,14 +45,21 @@ export default function HomePage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <Typography.Heading level={3}>
-          {greeting()}，{nickName ?? '管理员'}
-        </Typography.Heading>
-        <Typography.Paragraph size="sm" color="muted" className="mt-1">
-          欢迎使用 Admin 管理平台
-        </Typography.Paragraph>
-      </div>
+      <GlassTilt className="rounded-2xl border border-white/60 [box-shadow:0_210px_218px_0_rgba(0,0,0,0.07),0_26px_27px_0_rgba(0,0,0,0.04)]">
+        <div className="relative flex flex-col gap-1 overflow-hidden rounded-2xl p-8">
+          <img src={glassBg} alt="" aria-hidden className="absolute inset-0 size-full object-cover" />
+          <div
+            aria-hidden
+            className="absolute inset-0 bg-gradient-to-r from-black/35 via-black/15 to-transparent dark:from-black/55 dark:via-black/30"
+          />
+          <Typography.Heading level={3} className="relative text-white [text-shadow:0_2px_12px_rgba(0,0,0,0.25)]">
+            {greeting()}，{nickName ?? '管理员'}
+          </Typography.Heading>
+          <Typography.Paragraph size="sm" className="relative text-white/85">
+            欢迎使用 Admin 管理平台
+          </Typography.Paragraph>
+        </div>
+      </GlassTilt>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Card>
