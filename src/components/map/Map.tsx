@@ -40,19 +40,64 @@ export interface MapRootProps {
   children?: ReactNode
 }
 
-// OpenMapTiles 瓦片带 name:<lang> 字段，改写标注 text-field 优先取指定语言，取不到回退原值
-function applyLabelLanguage(m: MlMap, lang: string) {
+// OpenMapTiles 瓦片带 name:<lang> 字段，改写标注 text-field 优先取指定语言，取不到回退原值。
+// originals 缓存各图层原始 text-field，便于切换回"本地名称"或重复应用时拿到干净的基准表达式
+function applyLabelLanguage(m: MlMap, lang: string, originals: Map<string, unknown>) {
   for (const layer of m.getStyle().layers) {
     if (layer.type !== 'symbol') continue
     const tf = layer.layout?.['text-field']
     if (!tf) continue
-    const expr: unknown = typeof tf === 'string' && tf.startsWith('{') ? ['get', tf.slice(1, -1)] : tf
-    if (!JSON.stringify(expr).includes('name')) continue
-    m.setLayoutProperty(layer.id, 'text-field', [
-      'coalesce',
-      ['get', `name:${lang}`],
-      expr,
-    ] as never)
+    let base = originals.get(layer.id)
+    if (base === undefined) {
+      base = typeof tf === 'string' && tf.startsWith('{') ? ['get', tf.slice(1, -1)] : tf
+      if (!JSON.stringify(base).includes('name')) continue
+      originals.set(layer.id, base)
+    }
+    m.setLayoutProperty(
+      layer.id,
+      'text-field',
+      lang === 'local' ? (base as never) : (['coalesce', ['get', `name:${lang}`], base] as never),
+    )
+  }
+}
+
+// 仅保留 Ctrl + 左键拖动旋转/倾斜：禁用 maplibre 默认旋转（右键拖动 / Ctrl 左键），
+// 在容器捕获阶段拦截 Ctrl+左键按下（阻止 DragPan 接管），自行驱动 bearing/pitch，左键平移不受影响
+function createCtrlRotateHandler(m: MlMap) {
+  const container = m.getContainer()
+  let lastX = 0
+  let lastY = 0
+  let stop: (() => void) | null = null
+
+  const onMouseDown = (e: MouseEvent) => {
+    if (e.button !== 0 || !e.ctrlKey) return
+    e.stopPropagation()
+    e.preventDefault()
+    lastX = e.clientX
+    lastY = e.clientY
+    const maxPitch = m.getMaxPitch()
+    const onMove = (ev: MouseEvent) => {
+      m.setBearing(m.getBearing() + (ev.clientX - lastX) * 0.3)
+      m.setPitch(Math.min(maxPitch, Math.max(0, m.getPitch() - (ev.clientY - lastY) * 0.2)))
+      lastX = ev.clientX
+      lastY = ev.clientY
+    }
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+      stop = null
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    stop = onUp
+  }
+
+  container.addEventListener('mousedown', onMouseDown, true)
+  return {
+    destroy() {
+      container.removeEventListener('mousedown', onMouseDown, true)
+      stop?.()
+    },
   }
 }
 
@@ -78,6 +123,8 @@ export default function MapRoot({
   // style.load 会在主题切换换样式后再次触发，语言用 ref 取最新值
   const languageRef = useRef(language)
   languageRef.current = language
+  // 各图层原始 text-field 缓存（跟随地图实例）
+  const originalsRef = useRef(new Map<string, unknown>())
 
   useEffect(() => {
     const container = containerRef.current
@@ -94,14 +141,31 @@ export default function MapRoot({
     })
     m.on('style.load', () => {
       m.setProjection({ type: 'globe' })
-      if (languageRef.current) applyLabelLanguage(m, languageRef.current)
+      if (languageRef.current) applyLabelLanguage(m, languageRef.current, originalsRef.current)
     })
+    m.dragRotate.disable()
+    const ctrlRotate = createCtrlRotateHandler(m)
     setMap(m)
     return () => {
+      ctrlRotate.destroy()
       m.remove()
       setMap(null)
     }
   }, [])
+
+  // 语言运行时切换：样式已就绪立即应用，否则等下一次 style.load
+  useEffect(() => {
+    if (!map || !language) return
+    if (map.isStyleLoaded()) {
+      applyLabelLanguage(map, language, originalsRef.current)
+      return
+    }
+    const apply = () => applyLabelLanguage(map, language, originalsRef.current)
+    map.once('style.load', apply)
+    return () => {
+      map.off('style.load', apply)
+    }
+  }, [map, language])
 
   useEffect(() => {
     if (!map || appliedStyleRef.current === styleUrl) return
