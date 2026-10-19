@@ -234,7 +234,7 @@ export function ColumnSettings({ ctrl }: { ctrl: ColPrefsController }) {
 
   return (
     <Popover>
-      <Button variant="ghost" size="sm" aria-label="列设置">
+      <Button variant="tertiary" size="sm" aria-label="列设置">
         <Settings2 size={12} className="size-3!" aria-hidden />
         列设置
       </Button>

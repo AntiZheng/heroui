@@ -274,11 +274,16 @@ export default function DeptPage() {
               </ListBox>
             </SelectPopover>
           </SelectRoot>
-          <Button variant="primary" size="sm" onPress={search} className="ml-auto">
+          <Button
+            variant="secondary"
+            size="sm"
+            onPress={search}
+            className="ml-auto bg-accent-soft! text-accent-soft-foreground! hover:bg-accent-soft-hover! active:bg-accent-soft-hover!"
+          >
             <Search size={12} className="size-3!" aria-hidden />
             搜索
           </Button>
-          <Button variant="ghost" size="sm" onPress={reset}>
+          <Button variant="tertiary" size="sm" onPress={reset}>
             <RotateCcw size={12} className="size-3!" aria-hidden />
             重置
           </Button>
@@ -286,7 +291,18 @@ export default function DeptPage() {
       <div className="flex items-center justify-between">
           <Typography.Heading level={6} className="text-[13px] leading-4">部门列表</Typography.Heading>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onPress={toggleAll}>
+            {hasPermission('system:dept:add') && (
+              <Button
+                variant="secondary"
+                size="sm"
+                className="bg-accent-soft! text-accent-soft-foreground! hover:bg-accent-soft-hover! active:bg-accent-soft-hover!"
+                onPress={() => openCreate()}
+              >
+                <Plus size={12} className="size-3!" aria-hidden />
+                新增部门
+              </Button>
+            )}
+            <Button variant="tertiary" size="sm" onPress={toggleAll}>
               {allExpanded ? (
                 <FoldVertical size={12} className="size-3!" aria-hidden />
               ) : (
@@ -294,12 +310,6 @@ export default function DeptPage() {
               )}
               {allExpanded ? '折叠' : '展开'}
             </Button>
-            {hasPermission('system:dept:add') && (
-              <Button variant="primary" size="sm" onPress={() => openCreate()}>
-                <Plus size={12} className="size-3!" aria-hidden />
-                新增部门
-              </Button>
-            )}
             <ColumnSettings ctrl={colCtrl} />
           </div>
       </div>

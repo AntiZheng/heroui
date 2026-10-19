@@ -304,11 +304,16 @@ export default function DictPage() {
               </ListBox>
             </SelectPopover>
           </SelectRoot>
-          <Button variant="primary" size="sm" onPress={search} className="ml-auto">
+          <Button
+            variant="secondary"
+            size="sm"
+            onPress={search}
+            className="ml-auto bg-accent-soft! text-accent-soft-foreground! hover:bg-accent-soft-hover! active:bg-accent-soft-hover!"
+          >
             <Search size={12} className="size-3!" aria-hidden />
             搜索
           </Button>
-          <Button variant="ghost" size="sm" onPress={reset}>
+          <Button variant="tertiary" size="sm" onPress={reset}>
             <RotateCcw size={12} className="size-3!" aria-hidden />
             重置
           </Button>
@@ -316,21 +321,11 @@ export default function DictPage() {
       <div className="flex items-center justify-between">
           <Typography.Heading level={6} className="text-[13px] leading-4">字典类型</Typography.Heading>
           <div className="flex items-center gap-2">
-            {hasPermission('system:dict:remove') && (
-              <Button
-                variant="danger"
-                size="sm"
-                isDisabled={batchCount === 0}
-                onPress={() => setBatchOpen(true)}
-              >
-                <Trash2 size={12} className="size-3!" aria-hidden />
-                批量删除{batchCount > 0 ? `（${batchCount}）` : ''}
-              </Button>
-            )}
             {hasPermission('system:dict:add') && (
               <Button
-                variant="primary"
+                variant="secondary"
                 size="sm"
+                className="bg-accent-soft! text-accent-soft-foreground! hover:bg-accent-soft-hover! active:bg-accent-soft-hover!"
                 onPress={() => {
                   setEditing(null)
                   setFormOpen(true)
@@ -338,6 +333,17 @@ export default function DictPage() {
               >
                 <BookA size={12} className="size-3!" aria-hidden />
                 新增字典类型
+              </Button>
+            )}
+            {hasPermission('system:dict:remove') && (
+              <Button
+                variant="danger-soft"
+                size="sm"
+                isDisabled={batchCount === 0}
+                onPress={() => setBatchOpen(true)}
+              >
+                <Trash2 size={12} className="size-3!" aria-hidden />
+                批量删除{batchCount > 0 ? `（${batchCount}）` : ''}
               </Button>
             )}
             <ColumnSettings ctrl={colCtrl} />
