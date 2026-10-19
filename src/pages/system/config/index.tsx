@@ -221,7 +221,7 @@ export default function ConfigPage() {
                     }}
                     aria-label="修改"
                   >
-                    <SquarePen size={14} aria-hidden />
+                    <SquarePen size={12} className="size-3!" aria-hidden />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>修改</TooltipContent>
@@ -238,7 +238,7 @@ export default function ConfigPage() {
                     onPress={() => setDeleting(row)}
                     aria-label="删除"
                   >
-                    <Trash2 size={14} aria-hidden />
+                    <Trash2 size={12} className="size-3!" aria-hidden />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>删除</TooltipContent>
@@ -291,7 +291,7 @@ export default function ConfigPage() {
             }}
           >
             <Label className="text-xs font-medium text-muted">系统内置</Label>
-            <SelectTrigger>
+            <SelectTrigger className="min-h-8!">
               <SelectValue className="text-xs!">
                 {({ isPlaceholder, defaultChildren }) =>
                   isPlaceholder ? <span className="text-muted">全部</span> : defaultChildren
@@ -307,20 +307,20 @@ export default function ConfigPage() {
             </SelectPopover>
           </SelectRoot>
           <Button variant="primary" size="sm" onPress={search} className="ml-auto">
-            <Search size={14} aria-hidden />
+            <Search size={12} className="size-3!" aria-hidden />
             搜索
           </Button>
           <Button variant="ghost" size="sm" onPress={reset}>
-            <RotateCcw size={14} aria-hidden />
+            <RotateCcw size={12} className="size-3!" aria-hidden />
             重置
           </Button>
       </div>
       <div className="flex items-center justify-between">
-          <Typography.Heading level={6} className="text-xs">参数设置</Typography.Heading>
+          <Typography.Heading level={6} className="text-[13px] leading-4">参数设置</Typography.Heading>
           <div className="flex items-center gap-2">
             {hasPermission('system:config:edit') && (
               <Button variant="ghost" size="sm" onPress={handleRefreshCache}>
-                <RefreshCw size={14} aria-hidden />
+                <RefreshCw size={12} className="size-3!" aria-hidden />
                 刷新缓存
               </Button>
             )}
@@ -331,7 +331,7 @@ export default function ConfigPage() {
                 isDisabled={batchCount === 0}
                 onPress={() => setBatchOpen(true)}
               >
-                <Trash2 size={14} aria-hidden />
+                <Trash2 size={12} className="size-3!" aria-hidden />
                 批量删除{batchCount > 0 ? `（${batchCount}）` : ''}
               </Button>
             )}
@@ -344,7 +344,7 @@ export default function ConfigPage() {
                   setFormOpen(true)
                 }}
               >
-                <Settings2 size={14} aria-hidden />
+                <Settings2 size={12} className="size-3!" aria-hidden />
                 新增参数
               </Button>
             )}

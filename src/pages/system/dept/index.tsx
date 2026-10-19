@@ -193,7 +193,7 @@ export default function DeptPage() {
                     onPress={() => openCreate(row.dept_id)}
                     aria-label="新增子部门"
                   >
-                    <Plus size={14} aria-hidden />
+                    <Plus size={12} className="size-3!" aria-hidden />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>新增子部门</TooltipContent>
@@ -203,7 +203,7 @@ export default function DeptPage() {
               <Tooltip>
                 <TooltipTrigger>
                   <Button size="sm" variant="tertiary" isIconOnly className="rounded-full!" onPress={() => openEdit(row)} aria-label="修改">
-                    <SquarePen size={14} aria-hidden />
+                    <SquarePen size={12} className="size-3!" aria-hidden />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>修改</TooltipContent>
@@ -220,7 +220,7 @@ export default function DeptPage() {
                     onPress={() => setDeleting(row)}
                     aria-label="删除"
                   >
-                    <Trash2 size={14} aria-hidden />
+                    <Trash2 size={12} className="size-3!" aria-hidden />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>删除</TooltipContent>
@@ -259,7 +259,7 @@ export default function DeptPage() {
             }}
           >
             <Label className="text-xs font-medium text-muted">状态</Label>
-            <SelectTrigger>
+            <SelectTrigger className="min-h-8!">
               <SelectValue className="text-xs!">
                 {({ isPlaceholder, defaultChildren }) =>
                   isPlaceholder ? <span className="text-muted">全部状态</span> : defaultChildren
@@ -275,28 +275,28 @@ export default function DeptPage() {
             </SelectPopover>
           </SelectRoot>
           <Button variant="primary" size="sm" onPress={search} className="ml-auto">
-            <Search size={14} aria-hidden />
+            <Search size={12} className="size-3!" aria-hidden />
             搜索
           </Button>
           <Button variant="ghost" size="sm" onPress={reset}>
-            <RotateCcw size={14} aria-hidden />
+            <RotateCcw size={12} className="size-3!" aria-hidden />
             重置
           </Button>
       </div>
       <div className="flex items-center justify-between">
-          <Typography.Heading level={6} className="text-xs">部门列表</Typography.Heading>
+          <Typography.Heading level={6} className="text-[13px] leading-4">部门列表</Typography.Heading>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onPress={toggleAll}>
               {allExpanded ? (
-                <FoldVertical size={14} aria-hidden />
+                <FoldVertical size={12} className="size-3!" aria-hidden />
               ) : (
-                <UnfoldVertical size={14} aria-hidden />
+                <UnfoldVertical size={12} className="size-3!" aria-hidden />
               )}
               {allExpanded ? '折叠' : '展开'}
             </Button>
             {hasPermission('system:dept:add') && (
               <Button variant="primary" size="sm" onPress={() => openCreate()}>
-                <Plus size={14} aria-hidden />
+                <Plus size={12} className="size-3!" aria-hidden />
                 新增部门
               </Button>
             )}

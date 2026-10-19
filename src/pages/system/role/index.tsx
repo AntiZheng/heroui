@@ -243,7 +243,7 @@ export default function RolePage() {
                       }}
                       aria-label="修改"
                     >
-                      <SquarePen size={14} aria-hidden />
+                      <SquarePen size={12} className="size-3!" aria-hidden />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>修改</TooltipContent>
@@ -258,7 +258,7 @@ export default function RolePage() {
                       onPress={() => setDataScopeRole(row)}
                       aria-label="数据权限"
                     >
-                      <Shield size={14} aria-hidden />
+                      <Shield size={12} className="size-3!" aria-hidden />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>数据权限</TooltipContent>
@@ -273,7 +273,7 @@ export default function RolePage() {
                       onPress={() => setAuthRole(row)}
                       aria-label="分配用户"
                     >
-                      <Users size={14} aria-hidden />
+                      <Users size={12} className="size-3!" aria-hidden />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>分配用户</TooltipContent>
@@ -291,7 +291,7 @@ export default function RolePage() {
                     onPress={() => setDeleting(row)}
                     aria-label="删除"
                   >
-                    <Trash2 size={14} aria-hidden />
+                    <Trash2 size={12} className="size-3!" aria-hidden />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>删除</TooltipContent>
@@ -344,7 +344,7 @@ export default function RolePage() {
             }}
           >
             <Label className="text-xs font-medium text-muted">状态</Label>
-            <SelectTrigger>
+            <SelectTrigger className="min-h-8!">
               <SelectValue className="text-xs!">
                 {({ isPlaceholder, defaultChildren }) =>
                   isPlaceholder ? <span className="text-muted">全部状态</span> : defaultChildren
@@ -360,16 +360,16 @@ export default function RolePage() {
             </SelectPopover>
           </SelectRoot>
           <Button variant="primary" size="sm" onPress={search} className="ml-auto">
-            <Search size={14} aria-hidden />
+            <Search size={12} className="size-3!" aria-hidden />
             搜索
           </Button>
           <Button variant="ghost" size="sm" onPress={reset}>
-            <RotateCcw size={14} aria-hidden />
+            <RotateCcw size={12} className="size-3!" aria-hidden />
             重置
           </Button>
       </div>
       <div className="flex items-center justify-between">
-          <Typography.Heading level={6} className="text-xs">角色列表</Typography.Heading>
+          <Typography.Heading level={6} className="text-[13px] leading-4">角色列表</Typography.Heading>
           <div className="flex items-center gap-2">
             {hasPermission('system:role:remove') && (
               <Button
@@ -378,7 +378,7 @@ export default function RolePage() {
                 isDisabled={batchCount === 0}
                 onPress={() => setBatchOpen(true)}
               >
-                <Trash2 size={14} aria-hidden />
+                <Trash2 size={12} className="size-3!" aria-hidden />
                 批量删除{batchCount > 0 ? `（${batchCount}）` : ''}
               </Button>
             )}
@@ -391,7 +391,7 @@ export default function RolePage() {
                 setFormOpen(true)
               }}
             >
-              <ShieldPlus size={14} aria-hidden />
+              <ShieldPlus size={12} className="size-3!" aria-hidden />
               新增角色
             </Button>
             )}

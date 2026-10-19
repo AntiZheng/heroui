@@ -200,20 +200,20 @@ export default function AppShell() {
         </nav>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-12 items-center gap-3 rounded-xl border border-foreground/20 bg-background px-6">
+        <header className="mx-6 flex h-12 items-center gap-3 rounded-xl border border-foreground/20 bg-background px-6">
           <Tooltip>
             <TooltipTrigger>
               <button
                 onClick={toggleCollapsed}
                 aria-label={collapsed ? '展开侧边栏' : '收起侧边栏'}
-                className="flex size-8 cursor-pointer items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-secondary hover:text-foreground"
+                className="flex size-7 cursor-pointer items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-secondary hover:text-foreground"
               >
-                <PanelLeft size={16} aria-hidden />
+                <PanelLeft size={14} aria-hidden />
               </button>
             </TooltipTrigger>
             <TooltipContent>{collapsed ? '展开侧边栏' : '收起侧边栏'}</TooltipContent>
           </Tooltip>
-          <Breadcrumbs className="mr-auto">
+          <Breadcrumbs className="mr-auto rounded-full bg-surface-secondary px-3 py-1">
             {crumbs.map((crumb, i) => (
               <Breadcrumbs.Item
                 key={crumb.label}
@@ -230,7 +230,7 @@ export default function AppShell() {
           <div
             role="radiogroup"
             aria-label="主题模式"
-            className="flex items-center gap-0.5 rounded-full border border-separator bg-surface-secondary p-1"
+            className="flex items-center gap-0.5 rounded-full border border-separator bg-surface-secondary p-0.5"
           >
             {(
               [
@@ -245,18 +245,18 @@ export default function AppShell() {
                 aria-checked={theme === value}
                 aria-label={label}
                 onClick={() => setTheme(value)}
-                className={`flex size-7 cursor-pointer items-center justify-center rounded-full transition-colors ${
+                className={`flex size-6 cursor-pointer items-center justify-center rounded-full transition-colors ${
                   theme === value
                     ? 'bg-surface text-foreground shadow-sm'
                     : 'text-muted hover:text-foreground'
                 }`}
               >
-                <Icon size={14} aria-hidden />
+                <Icon size={12} aria-hidden />
               </button>
             ))}
           </div>
           <Dropdown>
-            <DropdownTrigger className="flex size-8 cursor-pointer items-center justify-center rounded-full bg-accent text-xs font-medium text-accent-foreground outline-none focus-visible:ring-2 focus-visible:ring-accent/50">
+            <DropdownTrigger className="flex size-7 cursor-pointer items-center justify-center rounded-full bg-accent text-xs font-medium text-accent-foreground outline-none focus-visible:ring-2 focus-visible:ring-accent/50">
               {user?.nick_name?.slice(0, 1) ?? 'A'}
             </DropdownTrigger>
             <DropdownPopover placement="bottom end">

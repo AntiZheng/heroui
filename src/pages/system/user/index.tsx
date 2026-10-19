@@ -47,6 +47,7 @@ import SelectionCheckbox from '../../../components/SelectionCheckbox'
 import PageSizeStepper from '../../../components/PageSizeStepper'
 import { flattenDeptTree } from './deptTree'
 import RowActions from './RowActions'
+import StatusSwitch from './StatusSwitch'
 import UserFormModal from './UserFormModal'
 import type { UserListQuery } from '../../../api/user'
 import type { SysUserRow } from '../../../types/user'
@@ -71,6 +72,7 @@ const columns = [
   { key: 'nick_name', label: '昵称' },
   { key: 'phonenumber', label: '手机号' },
   { key: 'status', label: '状态' },
+  { key: 'status_switch', label: '启用' },
   { key: 'create_time', label: '创建时间' },
   { key: 'actions', label: '操作' },
 ]
@@ -173,6 +175,8 @@ export default function UserPage() {
             {row.status === '0' ? '正常' : '停用'}
           </Chip>
         )
+      case 'status_switch':
+        return <StatusSwitch row={row} />
       case 'actions':
         return <RowActions row={row} onEdit={openEdit} />
       case 'create_time':
@@ -223,7 +227,7 @@ export default function UserPage() {
             }}
           >
             <Label className="text-xs font-medium text-muted">部门</Label>
-            <SelectTrigger>
+            <SelectTrigger className="min-h-8!">
               <SelectValue className="text-xs!">
                 {({ isPlaceholder, defaultChildren }) =>
                   isPlaceholder ? <span className="text-muted">全部部门</span> : defaultChildren
@@ -240,16 +244,16 @@ export default function UserPage() {
             </SelectPopover>
           </SelectRoot>
           <Button variant="primary" size="sm" onPress={search} className="ml-auto">
-            <Search size={14} aria-hidden />
+            <Search size={12} className="size-3!" aria-hidden />
             搜索
           </Button>
           <Button variant="ghost" size="sm" onPress={reset}>
-            <RotateCcw size={14} aria-hidden />
+            <RotateCcw size={12} className="size-3!" aria-hidden />
             重置
           </Button>
       </div>
       <div className="flex items-center justify-between">
-        <Typography.Heading level={6} className="text-xs">用户列表</Typography.Heading>
+        <Typography.Heading level={6} className="text-[13px] leading-4">用户列表</Typography.Heading>
         <div className="flex items-center gap-2">
           {hasPermission('system:user:remove') && (
             <Button
@@ -258,13 +262,13 @@ export default function UserPage() {
               isDisabled={batchCount === 0}
               onPress={() => setBatchOpen(true)}
             >
-              <Trash2 size={14} aria-hidden />
+              <Trash2 size={12} className="size-3!" aria-hidden />
               批量删除{batchCount > 0 ? `（${batchCount}）` : ''}
             </Button>
           )}
           {hasPermission('system:user:add') && (
             <Button variant="primary" size="sm" onPress={openCreate}>
-              <UserPlus size={14} aria-hidden />
+              <UserPlus size={12} className="size-3!" aria-hidden />
               新增用户
             </Button>
           )}

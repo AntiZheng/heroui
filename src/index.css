@@ -72,6 +72,23 @@
   line-height: 1rem;
 }
 
+/* 按钮上下留白缩一档：HeroUI 垂直 padding 为 0，上下空间由固定高度决定，
+   故降高度（sm md:32→28px、默认 md:36→32px）；左右内边距不变，图标按钮保持正方不参与 */
+.button:not(.button--icon-only) {
+  height: 2.25rem;
+}
+.button--sm:not(.button--icon-only) {
+  height: 2rem;
+}
+@media (width >= 48rem) {
+  .button:not(.button--icon-only) {
+    height: 2rem;
+  }
+  .button--sm:not(.button--icon-only) {
+    height: 1.75rem;
+  }
+}
+
 /* 面包屑字号 13px：HeroUI .breadcrumbs__link 基类默认 text-sm（14px），
    根元素上的字号类作用不到链接元素，需直接覆盖基类 */
 .breadcrumbs__link {
@@ -79,10 +96,22 @@
   line-height: 1.1rem;
 }
 
+/* 面包屑末项（当前页）与其余项保持一致：React Aria 给 current 项加 aria-disabled，
+   HeroUI .link[aria-disabled=true] 会带入 50% 透明度，这里还原为不透明 */
+.breadcrumbs__item[data-current] .breadcrumbs__link {
+  opacity: 1;
+}
+
 /* 搜索框输入字号压到 12px：HeroUI .search-field__input 基类默认 text-base / sm:text-sm */
 .search-field__input {
   font-size: 0.75rem;
   line-height: 1rem;
+}
+
+/* 搜索框上下留白缩一档：外壳固定 h-9（36px），内部 py-2 在高度内居中，
+   故降外壳高度到 32px；左右 padding 与内部输入样式不动 */
+.search-field__group {
+  height: 2rem;
 }
 
 /* 表格行高压缩一档：单元格与表头的上下内边距 10px→8px（HeroUI 默认 py-2.5） */

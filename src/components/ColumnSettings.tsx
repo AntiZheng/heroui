@@ -53,11 +53,22 @@ export function useColPrefs({ storageKey, columns, fixedKeys = [] }: UseColPrefs
           const order = [...(p.order ?? defaultPrefs.order)].filter((k) =>
             columns.some((c) => c.key === k),
           )
-          for (const c of columns) if (!order.includes(c.key)) order.push(c.key)
+          // 新增列在老存储的 order 里不存在：按默认列顺序插到下一个已有列之前，并默认可见
+          const added: string[] = []
+          for (let i = 0; i < columns.length; i++) {
+            const key = columns[i].key
+            if (order.includes(key)) continue
+            added.push(key)
+            const next = columns.slice(i + 1).find((c) => order.includes(c.key))
+            if (next) order.splice(order.indexOf(next.key), 0, key)
+            else order.push(key)
+          }
           const known = new Set(order)
+          const visible = (p.visible ?? []).filter((k) => known.has(k))
+          for (const k of added) if (!visible.includes(k)) visible.push(k)
           return {
             order,
-            visible: (p.visible ?? []).filter((k) => known.has(k)),
+            visible,
             pinned: (p.pinned ?? []).filter((k) => known.has(k)),
           }
         }
@@ -186,13 +197,15 @@ export function useStickyColumns({
     const i = visibleColumns.findIndex((c) => c.key === key)
     if (i < 0) return {}
     if (fixedRightKeys.includes(key)) {
+      // 宽度 0 提示 + 不换行：列为 auto 布局时收缩到内容宽度，剩余宽度分给其他列
       return isHeader
         ? {
             className:
-              'sticky right-0 z-30 bg-surface-secondary shadow-[-8px_0_12px_-6px_rgba(0,0,0,0.15)]',
+              'sticky right-0 z-30 w-0 whitespace-nowrap bg-surface-secondary shadow-[-8px_0_12px_-6px_rgba(0,0,0,0.15)]',
           }
         : {
-            className: 'sticky right-0 z-10 bg-surface shadow-[-8px_0_12px_-6px_rgba(0,0,0,0.15)]',
+            className:
+              'sticky right-0 z-10 w-0 whitespace-nowrap bg-surface shadow-[-8px_0_12px_-6px_rgba(0,0,0,0.15)]',
           }
     }
     if (!pinnedSet.has(key)) return {}
@@ -222,7 +235,7 @@ export function ColumnSettings({ ctrl }: { ctrl: ColPrefsController }) {
   return (
     <Popover>
       <Button variant="ghost" size="sm" aria-label="列设置">
-        <Settings2 size={14} aria-hidden />
+        <Settings2 size={12} className="size-3!" aria-hidden />
         列设置
       </Button>
       <Popover.Content className="w-52">

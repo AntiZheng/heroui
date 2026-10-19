@@ -200,7 +200,7 @@ export default function DictPage() {
                       onPress={() => navigate(`/system/dict/data/${row.dict_type}`)}
                       aria-label="字典数据"
                     >
-                      <BookText size={14} aria-hidden />
+                      <BookText size={12} className="size-3!" aria-hidden />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>字典数据</TooltipContent>
@@ -218,7 +218,7 @@ export default function DictPage() {
                       }}
                       aria-label="修改"
                     >
-                      <SquarePen size={14} aria-hidden />
+                      <SquarePen size={12} className="size-3!" aria-hidden />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>修改</TooltipContent>
@@ -236,7 +236,7 @@ export default function DictPage() {
                     onPress={() => setDeleting(row)}
                     aria-label="删除"
                   >
-                    <Trash2 size={14} aria-hidden />
+                    <Trash2 size={12} className="size-3!" aria-hidden />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>删除</TooltipContent>
@@ -289,7 +289,7 @@ export default function DictPage() {
             }}
           >
             <Label className="text-xs font-medium text-muted">状态</Label>
-            <SelectTrigger>
+            <SelectTrigger className="min-h-8!">
               <SelectValue className="text-xs!">
                 {({ isPlaceholder, defaultChildren }) =>
                   isPlaceholder ? <span className="text-muted">全部状态</span> : defaultChildren
@@ -305,16 +305,16 @@ export default function DictPage() {
             </SelectPopover>
           </SelectRoot>
           <Button variant="primary" size="sm" onPress={search} className="ml-auto">
-            <Search size={14} aria-hidden />
+            <Search size={12} className="size-3!" aria-hidden />
             搜索
           </Button>
           <Button variant="ghost" size="sm" onPress={reset}>
-            <RotateCcw size={14} aria-hidden />
+            <RotateCcw size={12} className="size-3!" aria-hidden />
             重置
           </Button>
       </div>
       <div className="flex items-center justify-between">
-          <Typography.Heading level={6} className="text-xs">字典类型</Typography.Heading>
+          <Typography.Heading level={6} className="text-[13px] leading-4">字典类型</Typography.Heading>
           <div className="flex items-center gap-2">
             {hasPermission('system:dict:remove') && (
               <Button
@@ -323,7 +323,7 @@ export default function DictPage() {
                 isDisabled={batchCount === 0}
                 onPress={() => setBatchOpen(true)}
               >
-                <Trash2 size={14} aria-hidden />
+                <Trash2 size={12} className="size-3!" aria-hidden />
                 批量删除{batchCount > 0 ? `（${batchCount}）` : ''}
               </Button>
             )}
@@ -336,7 +336,7 @@ export default function DictPage() {
                   setFormOpen(true)
                 }}
               >
-                <BookA size={14} aria-hidden />
+                <BookA size={12} className="size-3!" aria-hidden />
                 新增字典类型
               </Button>
             )}

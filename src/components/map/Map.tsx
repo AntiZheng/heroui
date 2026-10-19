@@ -37,6 +37,8 @@ export interface MapRootProps {
   className?: string
   /** 标注语言（OpenMapTiles name:<lang> 字段），如 'zh'；缺翻译的要素回退原标注 */
   language?: string
+  /** 底图背景层透明，露出容器下面的页面底色（主题切换后仍生效） */
+  transparentBackground?: boolean
   children?: ReactNode
 }
 
@@ -58,6 +60,14 @@ function applyLabelLanguage(m: MlMap, lang: string, originals: Map<string, unkno
       'text-field',
       lang === 'local' ? (base as never) : (['coalesce', ['get', `name:${lang}`], base] as never),
     )
+  }
+}
+
+function applyBackgroundTransparency(m: MlMap, transparent: boolean) {
+  for (const layer of m.getStyle().layers) {
+    if (layer.type === 'background') {
+      m.setPaintProperty(layer.id, 'background-opacity', transparent ? 0 : 1)
+    }
   }
 }
 
@@ -110,6 +120,7 @@ export default function MapRoot({
   mapStyle,
   className,
   language,
+  transparentBackground,
   children,
 }: MapRootProps) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -125,6 +136,8 @@ export default function MapRoot({
   languageRef.current = language
   // 各图层原始 text-field 缓存（跟随地图实例）
   const originalsRef = useRef(new Map<string, unknown>())
+  const transparentBackgroundRef = useRef(transparentBackground)
+  transparentBackgroundRef.current = transparentBackground
 
   useEffect(() => {
     const container = containerRef.current
@@ -141,6 +154,7 @@ export default function MapRoot({
     })
     m.on('style.load', () => {
       m.setProjection({ type: 'globe' })
+      applyBackgroundTransparency(m, !!transparentBackgroundRef.current)
       if (languageRef.current) applyLabelLanguage(m, languageRef.current, originalsRef.current)
     })
     m.dragRotate.disable()
@@ -166,6 +180,12 @@ export default function MapRoot({
       map.off('style.load', apply)
     }
   }, [map, language])
+
+  // 运行期切换透明背景；样式尚未就绪时由 style.load 里的 ref 兜底
+  useEffect(() => {
+    if (!map || !map.isStyleLoaded()) return
+    applyBackgroundTransparency(map, !!transparentBackground)
+  }, [map, transparentBackground])
 
   useEffect(() => {
     if (!map || appliedStyleRef.current === styleUrl) return

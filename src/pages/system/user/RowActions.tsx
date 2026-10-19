@@ -13,10 +13,6 @@ import {
   ModalFooter,
   ModalHeader,
   ModalRoot,
-  Switch,
-  SwitchContent,
-  SwitchControl,
-  SwitchThumb,
   TextField,
   Tooltip,
   TooltipContent,
@@ -24,7 +20,7 @@ import {
   toast,
   useOverlayState,
 } from '@heroui/react'
-import { changeStatus, deleteUsers, resetPwd } from '../../../api/user'
+import { deleteUsers, resetPwd } from '../../../api/user'
 import { hasPermission } from '../../../stores/auth'
 import type { SysUserRow } from '../../../types/user'
 
@@ -35,7 +31,6 @@ interface Props {
 
 export default function RowActions({ row, onEdit }: Props) {
   const queryClient = useQueryClient()
-  const [status, setStatus] = useState(row.status)
   const resetState = useOverlayState()
   const [newPwd, setNewPwd] = useState('')
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -55,17 +50,6 @@ export default function RowActions({ row, onEdit }: Props) {
     invalidate()
   }
 
-  const handleStatusToggle = async (checked: boolean) => {
-    const next = checked ? '0' : '1'
-    try {
-      await changeStatus(row, next)
-      setStatus(next)
-      toast('成功', { description: '状态修改成功', variant: 'success' })
-    } catch {
-      // 失败保持原状态
-    }
-  }
-
   const handleResetPwd = async () => {
     if (!newPwd) {
       toast('提示', { description: '请输入新密码', variant: 'warning' })
@@ -82,19 +66,12 @@ export default function RowActions({ row, onEdit }: Props) {
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <Switch isSelected={status === '0'} onChange={handleStatusToggle} aria-label="启用状态">
-        <SwitchContent>
-          <SwitchControl>
-            <SwitchThumb />
-          </SwitchControl>
-        </SwitchContent>
-      </Switch>
+    <div className="flex items-center gap-1">
       {hasPermission('system:user:edit') && (
         <Tooltip>
           <TooltipTrigger>
             <Button size="sm" variant="tertiary" isIconOnly className="rounded-full!" onPress={() => onEdit(row)} aria-label="编辑">
-              <SquarePen size={14} aria-hidden />
+              <SquarePen size={12} className="size-3!" aria-hidden />
             </Button>
           </TooltipTrigger>
           <TooltipContent>编辑</TooltipContent>
@@ -104,7 +81,7 @@ export default function RowActions({ row, onEdit }: Props) {
         <Tooltip>
           <TooltipTrigger>
             <Button size="sm" variant="tertiary" isIconOnly className="rounded-full!" onPress={resetState.open} aria-label="重置密码">
-              <KeyRound size={14} aria-hidden />
+              <KeyRound size={12} className="size-3!" aria-hidden />
             </Button>
           </TooltipTrigger>
           <TooltipContent>重置密码</TooltipContent>
@@ -122,7 +99,7 @@ export default function RowActions({ row, onEdit }: Props) {
                 onPress={() => setDeleteOpen(true)}
                 aria-label="删除"
               >
-                <Trash2 size={14} aria-hidden />
+                <Trash2 size={12} className="size-3!" aria-hidden />
               </Button>
             </TooltipTrigger>
             <TooltipContent>删除</TooltipContent>

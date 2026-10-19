@@ -211,9 +211,9 @@ export default function AuthUserModal({ isOpen, role, onClose }: Props) {
                   onPress={handleBatch}
                 >
                   {isAllocatedTab ? (
-                    <UserMinus size={14} aria-hidden />
+                    <UserMinus size={12} className="size-3!" aria-hidden />
                   ) : (
-                    <UserPlus size={14} aria-hidden />
+                    <UserPlus size={12} className="size-3!" aria-hidden />
                   )}
                   {isAllocatedTab ? '批量取消授权' : '批量授权'}
                 </Button>
@@ -300,9 +300,9 @@ export default function AuthUserModal({ isOpen, role, onClose }: Props) {
                                   }
                                 >
                                   {isAllocatedTab ? (
-                                    <UserMinus size={14} aria-hidden />
+                                    <UserMinus size={12} className="size-3!" aria-hidden />
                                   ) : (
-                                    <UserPlus size={14} aria-hidden />
+                                    <UserPlus size={12} className="size-3!" aria-hidden />
                                   )}
                                 </Button>
                               </TooltipTrigger>
