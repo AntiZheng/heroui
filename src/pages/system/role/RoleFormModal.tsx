@@ -1,26 +1,16 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  Button,
   Input,
   Label,
-  ModalBackdrop,
-  ModalBody,
-  ModalContainer,
-  ModalDialog,
-  ModalFooter,
-  ModalHeader,
-  ModalRoot,
   Spinner,
-  Switch,
-  SwitchContent,
-  SwitchControl,
-  SwitchThumb,
-  TextField,
   TextArea,
+  TextField,
   toast,
-  useOverlayState,
 } from '@heroui/react'
+import { ShieldCheck } from 'lucide-react'
+import FormModal from '../../../components/FormModal'
+import { FormSection, FormSwitch } from '../../../components/FormSection'
 import { addRole, editRole, getRoleDetail } from '../../../api/role'
 import { getMenuTree } from '../../../api/menu'
 import type { RolePayload, SysRoleRow } from '../../../types/role'
@@ -42,7 +32,6 @@ const emptyForm = {
 
 export default function RoleFormModal({ isOpen, editing, onClose }: Props) {
   const queryClient = useQueryClient()
-  const state = useOverlayState({ isOpen, onOpenChange: (v) => !v && onClose() })
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
   const [checked, setChecked] = useState<Set<number>>(new Set())
@@ -110,83 +99,74 @@ export default function RoleFormModal({ isOpen, editing, onClose }: Props) {
   }
 
   return (
-    <ModalRoot state={state}>
-      <ModalBackdrop>
-        <ModalContainer size="lg">
-          <ModalDialog>
-            <ModalHeader>{editing ? '编辑角色' : '新增角色'}</ModalHeader>
-            <ModalBody className="flex flex-col gap-4">
-              <div className="grid grid-cols-2 gap-4">
-                <TextField
-                  value={form.roleName}
-                  onChange={(v) => setForm((f) => ({ ...f, roleName: v }))}
-                  isRequired
-                >
-                  <Label>角色名称</Label>
-                  <Input />
-                </TextField>
-                <TextField
-                  value={form.roleKey}
-                  onChange={(v) => setForm((f) => ({ ...f, roleKey: v }))}
-                  isRequired
-                >
-                  <Label>权限字符</Label>
-                  <Input placeholder="如 admin" />
-                </TextField>
-                <TextField
-                  value={form.roleSort}
-                  onChange={(v) => setForm((f) => ({ ...f, roleSort: v }))}
-                >
-                  <Label>显示顺序</Label>
-                  <Input inputMode="numeric" />
-                </TextField>
-              </div>
-              <Switch
-                isSelected={form.status === '0'}
-                onChange={(v) => setForm((f) => ({ ...f, status: v ? '0' : '1' }))}
-                aria-label="状态正常"
-              >
-                <SwitchContent>
-                  <SwitchControl>
-                    <SwitchThumb />
-                  </SwitchControl>
-                </SwitchContent>
-                状态正常
-              </Switch>
-              <div>
-                <Label className="mb-2 block">菜单权限</Label>
-                {menuTree ? (
-                  <CheckboxTree
-                    nodes={menuTree}
-                    checked={checked}
-                    onChange={setChecked}
-                    className="max-h-64 overflow-auto rounded-xl border border-separator p-3"
-                  />
-                ) : (
-                  <div className="flex justify-center rounded-xl border border-separator py-6">
-                    <Spinner />
-                  </div>
-                )}
-              </div>
-              <TextField
-                value={form.remark}
-                onChange={(v) => setForm((f) => ({ ...f, remark: v }))}
-              >
-                <Label>备注</Label>
-                <TextArea rows={2} />
-              </TextField>
-            </ModalBody>
-            <ModalFooter>
-              <Button variant="secondary" onPress={onClose}>
-                取消
-              </Button>
-              <Button variant="primary" isPending={saving} onPress={handleSubmit}>
-                保存
-              </Button>
-            </ModalFooter>
-          </ModalDialog>
-        </ModalContainer>
-      </ModalBackdrop>
-    </ModalRoot>
+    <FormModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={editing ? '编辑角色' : '新增角色'}
+      icon={ShieldCheck}
+      size="lg"
+      saving={saving}
+      onSubmit={handleSubmit}
+    >
+      <FormSection title="基础信息">
+        <div className="grid grid-cols-2 gap-4">
+          <TextField
+            value={form.roleName}
+            onChange={(v) => setForm((f) => ({ ...f, roleName: v }))}
+            isRequired
+          >
+            <Label>角色名称</Label>
+            <Input />
+          </TextField>
+          <TextField
+            value={form.roleKey}
+            onChange={(v) => setForm((f) => ({ ...f, roleKey: v }))}
+            isRequired
+          >
+            <Label>权限字符</Label>
+            <Input placeholder="如 admin" />
+          </TextField>
+          <TextField
+            value={form.roleSort}
+            onChange={(v) => setForm((f) => ({ ...f, roleSort: v }))}
+          >
+            <Label>显示顺序</Label>
+            <Input inputMode="numeric" />
+          </TextField>
+        </div>
+      </FormSection>
+
+      <FormSection title="菜单权限">
+        {menuTree ? (
+          <CheckboxTree
+            nodes={menuTree}
+            checked={checked}
+            onChange={setChecked}
+            className="max-h-64 overflow-auto rounded-xl border border-accent/20 bg-accent-soft/60 p-3"
+          />
+        ) : (
+          <div className="flex justify-center rounded-xl border border-accent/20 bg-accent-soft/60 py-6">
+            <Spinner />
+          </div>
+        )}
+      </FormSection>
+
+      <FormSection title="状态与备注" tone="success">
+        <div className="flex flex-col gap-4">
+          <FormSwitch
+            label="启用角色"
+            isSelected={form.status === '0'}
+            onChange={(v) => setForm((f) => ({ ...f, status: v ? '0' : '1' }))}
+          />
+          <TextField
+            value={form.remark}
+            onChange={(v) => setForm((f) => ({ ...f, remark: v }))}
+          >
+            <Label>备注</Label>
+            <TextArea rows={2} />
+          </TextField>
+        </div>
+      </FormSection>
+    </FormModal>
   )
 }

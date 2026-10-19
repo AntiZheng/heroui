@@ -54,6 +54,7 @@ import { ColumnSettings, useColPrefs, useStickyColumns } from '../../../componen
 import TableCornerOverlays from '../../../components/TableCornerOverlays'
 import SelectionCheckbox from '../../../components/SelectionCheckbox'
 import PageSizeStepper from '../../../components/PageSizeStepper'
+import { useModalBackdropVariant } from '../../../components/useModalBackdrop'
 import type { SysConfigRow } from '../../../types/config'
 import ConfigFormModal from './ConfigFormModal'
 
@@ -84,6 +85,7 @@ function pageWindow(total: number, current: number): (number | '…')[] {
 
 export default function ConfigPage() {
   const queryClient = useQueryClient()
+  const backdropVariant = useModalBackdropVariant()
   const [query, setQuery] = useState<ConfigListQuery>({ pageNum: 1, pageSize: PAGE_SIZE })
   const [nameInput, setNameInput] = useState('')
   const [keyInput, setKeyInput] = useState('')
@@ -166,6 +168,7 @@ export default function ConfigPage() {
     toast('成功', { description: '删除成功', variant: 'success' })
     setDeleting(null)
     queryClient.invalidateQueries({ queryKey: ['config-list'] })
+    queryClient.invalidateQueries({ queryKey: ['config-key'] })
   }
 
   const handleBatchDelete = async () => {
@@ -179,6 +182,7 @@ export default function ConfigPage() {
     toast('成功', { description: '删除成功', variant: 'success' })
     setSelected(new Set())
     queryClient.invalidateQueries({ queryKey: ['config-list'] })
+    queryClient.invalidateQueries({ queryKey: ['config-key'] })
   }
 
   // 文本列单行截断，悬浮显示完整内容
@@ -413,7 +417,7 @@ export default function ConfigPage() {
                 {(row) => (
                   <TableRow id={row.id}>
                     <TableCell key="__select" className="pe-0!">
-                      <SelectionCheckbox label={`选择 ${row.config_name}`} />
+                      <SelectionCheckbox label={`选择 ${row.config_name}`} variant="secondary" />
                     </TableCell>
                     {visibleColumns.map((col) => (
                       <TableCell key={col.key} {...stickyColProps(col.key, false)}>
@@ -509,7 +513,7 @@ export default function ConfigPage() {
           if (!isOpen) setDeleting(null)
         }}
       >
-        <AlertDialog.Backdrop>
+        <AlertDialog.Backdrop variant={backdropVariant}>
           <AlertDialog.Container>
             <AlertDialog.Dialog className="sm:max-w-[400px]">
               <AlertDialog.CloseTrigger />
@@ -521,10 +525,10 @@ export default function ConfigPage() {
                 <p>确定删除参数「{deleting?.config_name}」吗？该操作不可撤销。</p>
               </AlertDialog.Body>
               <AlertDialog.Footer>
-                <Button slot="close" variant="tertiary">
+                <Button slot="close" size="sm" variant="tertiary">
                   取消
                 </Button>
-                <Button slot="close" variant="danger" onPress={handleDelete}>
+                <Button slot="close" size="sm" variant="danger" onPress={handleDelete}>
                   删除
                 </Button>
               </AlertDialog.Footer>

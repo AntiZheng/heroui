@@ -1,24 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import {
-  Button,
-  Input,
-  Label,
-  ModalBackdrop,
-  ModalBody,
-  ModalContainer,
-  ModalDialog,
-  ModalFooter,
-  ModalHeader,
-  ModalRoot,
-  Switch,
-  SwitchContent,
-  SwitchControl,
-  SwitchThumb,
-  TextField,
-  toast,
-  useOverlayState,
-} from '@heroui/react'
+import { Input, Label, TextField, toast } from '@heroui/react'
+import { BookMarked } from 'lucide-react'
+import FormModal from '../../../components/FormModal'
+import { FormSection, FormSwitch, ReadOnlyInput } from '../../../components/FormSection'
 import { addDictType, editDictType } from '../../../api/dict'
 import type { DictTypePayload, SysDictTypeRow } from '../../../types/dict'
 
@@ -37,7 +22,6 @@ const emptyForm = {
 
 export default function DictTypeFormModal({ isOpen, editing, onClose }: Props) {
   const queryClient = useQueryClient()
-  const state = useOverlayState({ isOpen, onOpenChange: (v) => !v && onClose() })
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
 
@@ -86,57 +70,50 @@ export default function DictTypeFormModal({ isOpen, editing, onClose }: Props) {
   }
 
   return (
-    <ModalRoot state={state}>
-      <ModalBackdrop>
-        <ModalContainer size="md">
-          <ModalDialog>
-            <ModalHeader>{editing ? '编辑字典类型' : '新增字典类型'}</ModalHeader>
-            <ModalBody className="flex flex-col gap-4">
-              <TextField
-                value={form.dictName}
-                onChange={(v) => setForm((f) => ({ ...f, dictName: v }))}
-                isRequired
-              >
-                <Label>字典名称</Label>
-                <Input placeholder="如 用户性别" />
-              </TextField>
-              <TextField
-                value={form.dictType}
-                onChange={(v) => setForm((f) => ({ ...f, dictType: v }))}
-                isRequired
-                isDisabled={!!editing}
-              >
-                <Label>字典类型</Label>
-                <Input placeholder="如 sys_user_sex" />
-              </TextField>
-              <Switch
-                isSelected={form.status === '0'}
-                onChange={(v) => setForm((f) => ({ ...f, status: v ? '0' : '1' }))}
-                aria-label="状态正常"
-              >
-                <SwitchContent>
-                  <SwitchControl>
-                    <SwitchThumb />
-                  </SwitchControl>
-                </SwitchContent>
-                状态正常
-              </Switch>
-              <TextField value={form.remark} onChange={(v) => setForm((f) => ({ ...f, remark: v }))}>
-                <Label>备注</Label>
-                <Input />
-              </TextField>
-            </ModalBody>
-            <ModalFooter>
-              <Button variant="secondary" onPress={onClose}>
-                取消
-              </Button>
-              <Button variant="primary" isPending={saving} onPress={handleSubmit}>
-                保存
-              </Button>
-            </ModalFooter>
-          </ModalDialog>
-        </ModalContainer>
-      </ModalBackdrop>
-    </ModalRoot>
+    <FormModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={editing ? '编辑字典类型' : '新增字典类型'}
+      icon={BookMarked}
+      size="md"
+      saving={saving}
+      onSubmit={handleSubmit}
+    >
+      <FormSection title="基础信息">
+        <div className="grid grid-cols-2 gap-4">
+          <TextField
+            value={form.dictName}
+            onChange={(v) => setForm((f) => ({ ...f, dictName: v }))}
+            isRequired
+          >
+            <Label>字典名称</Label>
+            <Input placeholder="如 用户性别" />
+          </TextField>
+          <TextField
+            value={form.dictType}
+            onChange={(v) => setForm((f) => ({ ...f, dictType: v }))}
+            isRequired
+            isDisabled={!!editing}
+          >
+            <Label>字典类型</Label>
+            {editing ? <ReadOnlyInput /> : <Input placeholder="如 sys_user_sex" />}
+          </TextField>
+        </div>
+      </FormSection>
+
+      <FormSection title="状态与备注" tone="success">
+        <div className="flex flex-col gap-4">
+          <FormSwitch
+            label="启用字典"
+            isSelected={form.status === '0'}
+            onChange={(v) => setForm((f) => ({ ...f, status: v ? '0' : '1' }))}
+          />
+          <TextField value={form.remark} onChange={(v) => setForm((f) => ({ ...f, remark: v }))}>
+            <Label>备注</Label>
+            <Input />
+          </TextField>
+        </div>
+      </FormSection>
+    </FormModal>
   )
 }

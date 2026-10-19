@@ -43,13 +43,19 @@ import {
   toast,
 } from '@heroui/react'
 import { ArrowLeft, BookText, RotateCcw, Search, SquarePen, Trash2 } from 'lucide-react'
-import { deleteDictData, getDictDataList, type DictDataListQuery } from '../../../api/dict'
+import {
+  deleteDictData,
+  getDictDataList,
+  getDictTypeList,
+  type DictDataListQuery,
+} from '../../../api/dict'
 import { hasPermission } from '../../../stores/auth'
 import BatchDeleteDialog from '../../../components/BatchDeleteDialog'
 import { ColumnSettings, useColPrefs, useStickyColumns } from '../../../components/ColumnSettings'
 import TableCornerOverlays from '../../../components/TableCornerOverlays'
 import SelectionCheckbox from '../../../components/SelectionCheckbox'
 import PageSizeStepper from '../../../components/PageSizeStepper'
+import { useModalBackdropVariant } from '../../../components/useModalBackdrop'
 import type { SysDictDataRow } from '../../../types/dict'
 import DictDataFormModal from './DictDataFormModal'
 
@@ -90,6 +96,7 @@ export default function DictDataPage() {
   const { dictType = '' } = useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const backdropVariant = useModalBackdropVariant()
   const [query, setQuery] = useState<DictDataListQuery>({ pageNum: 1, pageSize: PAGE_SIZE })
   const [labelInput, setLabelInput] = useState('')
   const [statusInput, setStatusInput] = useState<string | null>(null)
@@ -120,6 +127,15 @@ export default function DictDataPage() {
     placeholderData: keepPreviousData,
     enabled: !!dictType,
   })
+
+  const { data: dictTypePage } = useQuery({
+    queryKey: ['dict-type-name', dictType],
+    queryFn: () => getDictTypeList({ pageNum: 1, pageSize: 100, dictType }),
+    enabled: !!dictType,
+    staleTime: 5 * 60_000,
+  })
+
+  const dictName = dictTypePage?.rows.find((row) => row.dict_type === dictType)?.dict_name
 
   const rows = useMemo(() => data?.rows ?? [], [data])
   const pageSize = query.pageSize ?? PAGE_SIZE
@@ -247,14 +263,27 @@ export default function DictDataPage() {
       <div className="flex items-center gap-3">
         <Tooltip>
           <TooltipTrigger>
-            <Button variant="ghost" size="sm" onPress={() => navigate('/system/dict')} aria-label="返回字典类型">
+            <Button
+              variant="tertiary"
+              size="sm"
+              className="text-[13px]!"
+              onPress={() => navigate('/system/dict')}
+              aria-label="返回字典类型"
+            >
               <ArrowLeft size={12} className="size-3!" aria-hidden />
               返回
             </Button>
           </TooltipTrigger>
           <TooltipContent>返回字典类型</TooltipContent>
         </Tooltip>
-        <Typography.Heading level={5}>字典数据 — {dictType}</Typography.Heading>
+        <Chip
+          color="accent"
+          variant="soft"
+          size="sm"
+          className="h-6 cursor-default px-2.5 text-[13px] font-semibold select-none"
+        >
+          {dictName ? `${dictName}：${dictType}` : dictType}
+        </Chip>
       </div>
 
       <div className="flex flex-row flex-wrap items-end gap-3 border-b border-separator pb-4">
@@ -387,7 +416,7 @@ export default function DictDataPage() {
                 {(row) => (
                   <TableRow id={row.id}>
                     <TableCell key="__select" className="pe-0!">
-                      <SelectionCheckbox label={`选择 ${row.dict_label}`} />
+                      <SelectionCheckbox label={`选择 ${row.dict_label}`} variant="secondary" />
                     </TableCell>
                     {visibleColumns.map((col) => (
                       <TableCell key={col.key} {...stickyColProps(col.key, false)}>
@@ -488,7 +517,7 @@ export default function DictDataPage() {
           if (!isOpen) setDeleting(null)
         }}
       >
-        <AlertDialog.Backdrop>
+        <AlertDialog.Backdrop variant={backdropVariant}>
           <AlertDialog.Container>
             <AlertDialog.Dialog className="sm:max-w-[400px]">
               <AlertDialog.CloseTrigger />
@@ -500,10 +529,10 @@ export default function DictDataPage() {
                 <p>确定删除字典数据「{deleting?.dict_label}」吗？该操作不可撤销。</p>
               </AlertDialog.Body>
               <AlertDialog.Footer>
-                <Button slot="close" variant="tertiary">
+                <Button slot="close" size="sm" variant="tertiary">
                   取消
                 </Button>
-                <Button slot="close" variant="danger" onPress={handleDelete}>
+                <Button slot="close" size="sm" variant="danger" onPress={handleDelete}>
                   删除
                 </Button>
               </AlertDialog.Footer>

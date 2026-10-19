@@ -4,13 +4,6 @@ import {
   Button,
   Checkbox,
   EmptyState,
-  Label,
-  ModalBackdrop,
-  ModalBody,
-  ModalContainer,
-  ModalDialog,
-  ModalHeader,
-  ModalRoot,
   SearchField,
   Spinner,
   TableBody,
@@ -26,7 +19,6 @@ import {
   TooltipTrigger,
   Typography,
   toast,
-  useOverlayState,
 } from '@heroui/react'
 import { UserMinus, UserPlus, Users } from 'lucide-react'
 import {
@@ -39,6 +31,7 @@ import {
 } from '../../../api/role'
 import type { SysRoleRow } from '../../../types/role'
 import type { SysUserRow } from '../../../types/user'
+import FormModal from '../../../components/FormModal'
 
 interface Props {
   isOpen: boolean
@@ -50,7 +43,6 @@ const PAGE_SIZE = 10
 
 export default function AuthUserModal({ isOpen, role, onClose }: Props) {
   const queryClient = useQueryClient()
-  const state = useOverlayState({ isOpen, onOpenChange: (v) => !v && onClose() })
   const [tab, setTab] = useState('allocated')
   const [pageNum, setPageNum] = useState(1)
   const [nameInput, setNameInput] = useState('')
@@ -156,194 +148,200 @@ export default function AuthUserModal({ isOpen, role, onClose }: Props) {
   }
 
   return (
-    <ModalRoot state={state}>
-      <ModalBackdrop>
-        <ModalContainer size="lg">
-          <ModalDialog>
-            <ModalHeader>分配用户 — {role?.role_name}</ModalHeader>
-            <ModalBody className="flex flex-col gap-4">
-              <Tabs
-                selectedKey={tab}
-                onSelectionChange={(key) => {
-                  if (key != null) switchTab(String(key))
-                }}
-              >
-                <Tabs.List>
-                  <Tabs.Tab id="allocated">已分配用户</Tabs.Tab>
-                  <Tabs.Tab id="unallocated">未分配用户</Tabs.Tab>
-                </Tabs.List>
-              </Tabs>
+    <FormModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="分配用户"
+      meta={`角色：${role?.role_name ?? ''}`}
+      icon={Users}
+      size="lg"
+      footer={
+        <Button variant="tertiary" size="sm" onPress={onClose}>
+          关闭
+        </Button>
+      }
+    >
+      <Tabs
+        selectedKey={tab}
+        onSelectionChange={(key) => {
+          if (key != null) switchTab(String(key))
+        }}
+      >
+        <Tabs.List>
+          <Tabs.Tab id="allocated">已分配用户</Tabs.Tab>
+          <Tabs.Tab id="unallocated">未分配用户</Tabs.Tab>
+        </Tabs.List>
+      </Tabs>
 
-              <div className="flex flex-wrap items-end gap-3">
-                <SearchField
-                  aria-label="按账号搜索"
-                  value={nameInput}
-                  onChange={setNameInput}
-                  onSubmit={search}
-                  className="w-44"
-                >
-                  <Label className="text-xs font-medium text-muted">账号</Label>
-                  <SearchField.Group>
-                    <SearchField.SearchIcon />
-                    <SearchField.Input placeholder="回车搜索" className="text-xs!" />
-                    <SearchField.ClearButton />
-                  </SearchField.Group>
-                </SearchField>
-                <SearchField
-                  aria-label="按手机号搜索"
-                  value={phoneInput}
-                  onChange={setPhoneInput}
-                  onSubmit={search}
-                  className="w-44"
-                >
-                  <Label className="text-xs font-medium text-muted">手机号</Label>
-                  <SearchField.Group>
-                    <SearchField.SearchIcon />
-                    <SearchField.Input placeholder="回车搜索" className="text-xs!" />
-                    <SearchField.ClearButton />
-                  </SearchField.Group>
-                </SearchField>
-                <Button
-                  variant={isAllocatedTab ? 'danger' : 'primary'}
-                  size="sm"
-                  className="ml-auto"
-                  isPending={acting}
-                  onPress={handleBatch}
-                >
-                  {isAllocatedTab ? (
-                    <UserMinus size={12} className="size-3!" aria-hidden />
-                  ) : (
-                    <UserPlus size={12} className="size-3!" aria-hidden />
-                  )}
-                  {isAllocatedTab ? '批量取消授权' : '批量授权'}
-                </Button>
-              </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <SearchField
+          aria-label="按账号搜索"
+          value={nameInput}
+          onChange={setNameInput}
+          onSubmit={search}
+          className="w-44"
+        >
+          <SearchField.Group>
+            <SearchField.SearchIcon />
+            <SearchField.Input placeholder="搜索账号" className="text-xs!" />
+            <SearchField.ClearButton />
+          </SearchField.Group>
+        </SearchField>
+        <SearchField
+          aria-label="按手机号搜索"
+          value={phoneInput}
+          onChange={setPhoneInput}
+          onSubmit={search}
+          className="w-44"
+        >
+          <SearchField.Group>
+            <SearchField.SearchIcon />
+            <SearchField.Input placeholder="搜索手机号" className="text-xs!" />
+            <SearchField.ClearButton />
+          </SearchField.Group>
+        </SearchField>
+        <Button
+          variant={isAllocatedTab ? 'danger-soft' : 'secondary'}
+          size="sm"
+          className={
+            isAllocatedTab
+              ? 'ml-auto'
+              : 'ml-auto bg-accent-soft! text-accent-soft-foreground! hover:bg-accent-soft-hover! active:bg-accent-soft-hover!'
+          }
+          isPending={acting}
+          onPress={handleBatch}
+        >
+          {isAllocatedTab ? (
+            <UserMinus size={12} className="size-3!" aria-hidden />
+          ) : (
+            <UserPlus size={12} className="size-3!" aria-hidden />
+          )}
+          {isAllocatedTab ? '批量取消授权' : '批量授权'}
+        </Button>
+      </div>
 
-              <div className="overflow-hidden rounded-2xl border border-separator">
-                <TableRoot variant="secondary">
-                  <TableContent aria-label={isAllocatedTab ? '已分配用户' : '未分配用户'}>
-                    <TableHeader>
-                      <TableColumn id="select">
-                        <Checkbox
-                          aria-label="全选本页"
-                          isSelected={allPageSelected}
-                          onChange={toggleAllPage}
-                        >
-                          <Checkbox.Content>
-                            <Checkbox.Control>
-                              <Checkbox.Indicator />
-                            </Checkbox.Control>
-                          </Checkbox.Content>
-                        </Checkbox>
-                      </TableColumn>
-                      <TableColumn id="user_name" isRowHeader>
-                        账号
-                      </TableColumn>
-                      <TableColumn id="nick_name">昵称</TableColumn>
-                      <TableColumn id="phonenumber">手机号</TableColumn>
-                      <TableColumn id="action">操作</TableColumn>
-                    </TableHeader>
-                    <TableBody
-                      items={rows.map((r) => ({ ...r, id: r.user_id }))}
-                      dependencies={[tab, selected]}
-                      renderEmptyState={() =>
-                        isAllocatedTab ? loadingAllocated : loadingUnallocated ? (
-                          <Spinner />
-                        ) : (
-                          <EmptyState className="flex flex-col items-center justify-center gap-2 py-8">
-                            <Users size={20} aria-hidden className="text-muted" />
-                            <Typography.Paragraph size="sm" color="muted">
-                              暂无数据
-                            </Typography.Paragraph>
-                          </EmptyState>
-                        )
-                      }
+      <div className="cursor-default overflow-hidden rounded-xl border border-accent/20 [&_th]:bg-accent-soft/60">
+        <TableRoot variant="secondary">
+          <TableContent aria-label={isAllocatedTab ? '已分配用户' : '未分配用户'}>
+            <TableHeader>
+              <TableColumn id="select">
+                <Checkbox
+                  aria-label="全选本页"
+                  isSelected={allPageSelected}
+                  onChange={toggleAllPage}
+                >
+                  <Checkbox.Content>
+                    <Checkbox.Control>
+                      <Checkbox.Indicator />
+                    </Checkbox.Control>
+                  </Checkbox.Content>
+                </Checkbox>
+              </TableColumn>
+              <TableColumn id="user_name" isRowHeader>
+                账号
+              </TableColumn>
+              <TableColumn id="nick_name">昵称</TableColumn>
+              <TableColumn id="phonenumber">手机号</TableColumn>
+              <TableColumn id="action">操作</TableColumn>
+            </TableHeader>
+            <TableBody
+              items={rows.map((r) => ({ ...r, id: r.user_id }))}
+              dependencies={[tab, selected]}
+              renderEmptyState={() =>
+                (isAllocatedTab ? loadingAllocated : loadingUnallocated) ? (
+                  <Spinner />
+                ) : (
+                  <EmptyState className="flex flex-col items-center justify-center gap-2 py-8">
+                    <Users size={20} aria-hidden className="text-muted" />
+                    <Typography.Paragraph size="sm" color="muted">
+                      暂无数据
+                    </Typography.Paragraph>
+                  </EmptyState>
+                )
+              }
+            >
+              {(row: SysUserRow & { id: number }) => (
+                <TableRow id={row.id}>
+                  <TableCell>
+                    <Checkbox
+                      aria-label={`选择 ${row.user_name}`}
+                      variant="secondary"
+                      isSelected={selected.has(row.user_id)}
+                      onChange={(sel) => toggleRow(row.user_id, sel)}
                     >
-                      {(row: SysUserRow & { id: number }) => (
-                        <TableRow id={row.id}>
-                          <TableCell>
-                            <Checkbox
-                              aria-label={`选择 ${row.user_name}`}
-                              isSelected={selected.has(row.user_id)}
-                              onChange={(sel) => toggleRow(row.user_id, sel)}
-                            >
-                              <Checkbox.Content>
-                                <Checkbox.Control>
-                                  <Checkbox.Indicator />
-                                </Checkbox.Control>
-                              </Checkbox.Content>
-                            </Checkbox>
-                          </TableCell>
-                          <TableCell>{row.user_name}</TableCell>
-                          <TableCell>{row.nick_name}</TableCell>
-                          <TableCell>{row.phonenumber ?? '—'}</TableCell>
-                          <TableCell>
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <Button
-                                  size="sm"
-                                  variant={isAllocatedTab ? 'danger-soft' : 'tertiary'}
-                                  isIconOnly
-                                  className="rounded-full!"
-                                  isPending={acting}
-                                  aria-label={isAllocatedTab ? '取消授权' : '授权'}
-                                  onPress={() =>
-                                    isAllocatedTab
-                                      ? run(
-                                          () => cancelAuthUser(row.user_id, role!.role_id),
-                                          '取消授权成功',
-                                        )
-                                      : run(
-                                          () => selectAllAuthUsers(role!.role_id, [row.user_id]),
-                                          '授权成功',
-                                        )
-                                  }
-                                >
-                                  {isAllocatedTab ? (
-                                    <UserMinus size={12} className="size-3!" aria-hidden />
-                                  ) : (
-                                    <UserPlus size={12} className="size-3!" aria-hidden />
-                                  )}
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>{isAllocatedTab ? '取消授权' : '授权'}</TooltipContent>
-                            </Tooltip>
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </TableContent>
-                </TableRoot>
-              </div>
+                      <Checkbox.Content>
+                        <Checkbox.Control>
+                          <Checkbox.Indicator />
+                        </Checkbox.Control>
+                      </Checkbox.Content>
+                    </Checkbox>
+                  </TableCell>
+                  <TableCell>{row.user_name}</TableCell>
+                  <TableCell>{row.nick_name}</TableCell>
+                  <TableCell>{row.phonenumber ?? '—'}</TableCell>
+                  <TableCell>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Button
+                          size="sm"
+                          variant={isAllocatedTab ? 'danger-soft' : 'tertiary'}
+                          isIconOnly
+                          className="rounded-full!"
+                          isPending={acting}
+                          aria-label={isAllocatedTab ? '取消授权' : '授权'}
+                          onPress={() =>
+                            isAllocatedTab
+                              ? run(
+                                  () => cancelAuthUser(row.user_id, role!.role_id),
+                                  '取消授权成功',
+                                )
+                              : run(
+                                  () => selectAllAuthUsers(role!.role_id, [row.user_id]),
+                                  '授权成功',
+                                )
+                          }
+                        >
+                          {isAllocatedTab ? (
+                            <UserMinus size={12} className="size-3!" aria-hidden />
+                          ) : (
+                            <UserPlus size={12} className="size-3!" aria-hidden />
+                          )}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>{isAllocatedTab ? '取消授权' : '授权'}</TooltipContent>
+                    </Tooltip>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </TableContent>
+        </TableRoot>
+      </div>
 
-              <div className="flex items-center justify-between text-xs text-muted">
-                <span>共 {total} 条</span>
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    isDisabled={pageNum <= 1}
-                    onPress={() => setPageNum((p) => p - 1)}
-                  >
-                    上一页
-                  </Button>
-                  <span>
-                    {pageNum} / {totalPages}
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    isDisabled={pageNum >= totalPages}
-                    onPress={() => setPageNum((p) => p + 1)}
-                  >
-                    下一页
-                  </Button>
-                </div>
-              </div>
-            </ModalBody>
-          </ModalDialog>
-        </ModalContainer>
-      </ModalBackdrop>
-    </ModalRoot>
+      <div className="flex cursor-default items-center justify-between text-xs text-muted">
+        <span>共 {total} 条</span>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            isDisabled={pageNum <= 1}
+            onPress={() => setPageNum((p) => p - 1)}
+          >
+            上一页
+          </Button>
+          <span>
+            {pageNum} / {totalPages}
+          </span>
+          <Button
+            size="sm"
+            variant="ghost"
+            isDisabled={pageNum >= totalPages}
+            onPress={() => setPageNum((p) => p + 1)}
+          >
+            下一页
+          </Button>
+        </div>
+      </div>
+    </FormModal>
   )
 }

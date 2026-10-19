@@ -6,6 +6,14 @@ export const getCaptcha = () => request.get<never, CaptchaResult>('/captchaImage
 export const login = (data: { username: string; password: string; code: string; uuid: string }) =>
   request.post<never, TokenResponse>('/login', new URLSearchParams(data))
 
+export const register = (data: {
+  username: string
+  password: string
+  confirm_password: string
+  code: string
+  uuid: string
+}) => request.post<never, { user_id: number }>('/register', new URLSearchParams(data))
+
 export const getInfo = () =>
   request.get<never, { user: CurrentUserInfo; roles: string[]; permissions: string[] }>('/getInfo')
 

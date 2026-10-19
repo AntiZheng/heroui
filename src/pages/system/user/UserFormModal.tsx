@@ -7,26 +7,18 @@ import {
   Label,
   ListBox,
   ListBoxItem,
-  ModalBackdrop,
-  ModalBody,
-  ModalContainer,
-  ModalDialog,
-  ModalFooter,
-  ModalHeader,
-  ModalRoot,
   SelectIndicator,
   SelectPopover,
   SelectRoot,
   SelectTrigger,
   SelectValue,
-  Switch,
-  SwitchContent,
-  SwitchControl,
-  SwitchThumb,
   TextField,
   toast,
-  useOverlayState,
 } from '@heroui/react'
+import { UserRound } from 'lucide-react'
+import FormModal from '../../../components/FormModal'
+import { FormSection, FormSwitch, ReadOnlyInput } from '../../../components/FormSection'
+import { useModalBackdropVariant } from '../../../components/useModalBackdrop'
 import { addUser, editUser, getDeptTree } from '../../../api/user'
 import { flattenDeptTree } from './deptTree'
 import type { SysUserRow, UserPayload } from '../../../types/user'
@@ -49,7 +41,7 @@ const emptyForm = {
 
 export default function UserFormModal({ isOpen, editing, onClose }: Props) {
   const queryClient = useQueryClient()
-  const state = useOverlayState({ isOpen, onOpenChange: (v) => !v && onClose() })
+  const backdropVariant = useModalBackdropVariant()
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
   const [successName, setSuccessName] = useState<string | null>(null)
@@ -115,110 +107,121 @@ export default function UserFormModal({ isOpen, editing, onClose }: Props) {
 
   return (
     <>
-    <ModalRoot state={state}>
-      <ModalBackdrop>
-        <ModalContainer size="lg">
-          <ModalDialog>
-            <ModalHeader>{editing ? '编辑用户' : '新增用户'}</ModalHeader>
-            <ModalBody className="flex flex-col gap-4">
-              <div className="grid grid-cols-2 gap-4">
-                <TextField value={form.userName} onChange={(v) => setForm((f) => ({ ...f, userName: v }))} isRequired isDisabled={!!editing}>
-                  <Label>账号</Label>
-                  <Input />
-                </TextField>
-                <TextField value={form.nickName} onChange={(v) => setForm((f) => ({ ...f, nickName: v }))} isRequired>
-                  <Label>昵称</Label>
-                  <Input />
-                </TextField>
-                {!editing && (
-                  <TextField value={form.password} onChange={(v) => setForm((f) => ({ ...f, password: v }))} isRequired>
-                    <Label>密码</Label>
-                    <Input type="password" />
-                  </TextField>
-                )}
-                <TextField value={form.phonenumber} onChange={(v) => setForm((f) => ({ ...f, phonenumber: v }))}>
-                  <Label>手机号</Label>
-                  <Input />
-                </TextField>
-                <TextField value={form.email} onChange={(v) => setForm((f) => ({ ...f, email: v }))}>
-                  <Label>邮箱</Label>
-                  <Input />
-                </TextField>
-                <SelectRoot
-                  aria-label="部门"
-                  selectedKey={form.deptId.size > 0 ? Array.from(form.deptId)[0] : null}
-                  onSelectionChange={(key) =>
-                    setForm((f) => ({
-                      ...f,
-                      deptId: key != null ? new Set([String(key)]) : new Set<string>(),
-                    }))
-                  }
-                >
-                  <Label>部门</Label>
-                  <SelectTrigger>
-                    <SelectValue />
-                    <SelectIndicator />
-                  </SelectTrigger>
-                  <SelectPopover>
-                    <ListBox>
-                      {deptOptions.map((dept) => (
-                        <ListBoxItem key={String(dept.id)} id={String(dept.id)}>{dept.label}</ListBoxItem>
-                      ))}
-                    </ListBox>
-                  </SelectPopover>
-                </SelectRoot>
-              </div>
-              <Switch
-                isSelected={form.status === '0'}
-                onChange={(v) => setForm((f) => ({ ...f, status: v ? '0' : '1' }))}
-                aria-label="状态正常"
+      <FormModal
+        isOpen={isOpen}
+        onClose={onClose}
+        title={editing ? '编辑用户' : '新增用户'}
+        icon={UserRound}
+        size="lg"
+        saving={saving}
+        onSubmit={handleSubmit}
+      >
+        <FormSection title="基础信息">
+          <div className="grid grid-cols-2 gap-4">
+            <TextField
+              value={form.userName}
+              onChange={(v) => setForm((f) => ({ ...f, userName: v }))}
+              isRequired
+              isDisabled={!!editing}
+            >
+              <Label>账号</Label>
+              {editing ? <ReadOnlyInput /> : <Input />}
+            </TextField>
+            <TextField
+              value={form.nickName}
+              onChange={(v) => setForm((f) => ({ ...f, nickName: v }))}
+              isRequired
+            >
+              <Label>昵称</Label>
+              <Input />
+            </TextField>
+            {!editing && (
+              <TextField
+                value={form.password}
+                onChange={(v) => setForm((f) => ({ ...f, password: v }))}
+                isRequired
               >
-                <SwitchContent>
-                  <SwitchControl>
-                    <SwitchThumb />
-                  </SwitchControl>
-                </SwitchContent>
-                状态正常
-              </Switch>
-            </ModalBody>
-            <ModalFooter>
-              <Button variant="secondary" onPress={onClose}>
-                取消
-              </Button>
-              <Button variant="primary" isPending={saving} onPress={handleSubmit}>
-                保存
-              </Button>
-            </ModalFooter>
-          </ModalDialog>
-        </ModalContainer>
-      </ModalBackdrop>
-    </ModalRoot>
-    <AlertDialog
-      isOpen={successName !== null}
-      onOpenChange={(isOpen) => {
-        if (!isOpen) setSuccessName(null)
-      }}
-    >
-      <AlertDialog.Backdrop>
-        <AlertDialog.Container>
-          <AlertDialog.Dialog className="sm:max-w-[400px]">
-            <AlertDialog.CloseTrigger />
-            <AlertDialog.Header>
-              <AlertDialog.Icon status="success" />
-              <AlertDialog.Heading>新增成功</AlertDialog.Heading>
-            </AlertDialog.Header>
-            <AlertDialog.Body>
-              <p>用户「{successName}」已创建。</p>
-            </AlertDialog.Body>
-            <AlertDialog.Footer>
-              <Button slot="close" variant="primary">
-                确定
-              </Button>
-            </AlertDialog.Footer>
-          </AlertDialog.Dialog>
-        </AlertDialog.Container>
-      </AlertDialog.Backdrop>
-    </AlertDialog>
+                <Label>密码</Label>
+                <Input type="password" />
+              </TextField>
+            )}
+            <TextField
+              value={form.phonenumber}
+              onChange={(v) => setForm((f) => ({ ...f, phonenumber: v }))}
+            >
+              <Label>手机号</Label>
+              <Input />
+            </TextField>
+            <TextField
+              value={form.email}
+              onChange={(v) => setForm((f) => ({ ...f, email: v }))}
+            >
+              <Label>邮箱</Label>
+              <Input />
+            </TextField>
+            <SelectRoot
+              aria-label="部门"
+              selectedKey={form.deptId.size > 0 ? Array.from(form.deptId)[0] : null}
+              onSelectionChange={(key) =>
+                setForm((f) => ({
+                  ...f,
+                  deptId: key != null ? new Set([String(key)]) : new Set<string>(),
+                }))
+              }
+            >
+              <Label>部门</Label>
+              <SelectTrigger>
+                <SelectValue />
+                <SelectIndicator />
+              </SelectTrigger>
+              <SelectPopover>
+                <ListBox>
+                  {deptOptions.map((dept) => (
+                    <ListBoxItem key={String(dept.id)} id={String(dept.id)}>
+                      {dept.label}
+                    </ListBoxItem>
+                  ))}
+                </ListBox>
+              </SelectPopover>
+            </SelectRoot>
+          </div>
+        </FormSection>
+
+        <FormSection title="账号状态" tone="success">
+          <FormSwitch
+            label="启用账号"
+            isSelected={form.status === '0'}
+            onChange={(v) => setForm((f) => ({ ...f, status: v ? '0' : '1' }))}
+          />
+        </FormSection>
+      </FormModal>
+
+      <AlertDialog
+        isOpen={successName !== null}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) setSuccessName(null)
+        }}
+      >
+        <AlertDialog.Backdrop variant={backdropVariant}>
+          <AlertDialog.Container>
+            <AlertDialog.Dialog className="sm:max-w-[400px]">
+              <AlertDialog.CloseTrigger />
+              <AlertDialog.Header>
+                <AlertDialog.Icon status="success" />
+                <AlertDialog.Heading>新增成功</AlertDialog.Heading>
+              </AlertDialog.Header>
+              <AlertDialog.Body>
+                <p>用户「{successName}」已创建。</p>
+              </AlertDialog.Body>
+              <AlertDialog.Footer>
+                <Button slot="close" variant="primary" size="sm">
+                  确定
+                </Button>
+              </AlertDialog.Footer>
+            </AlertDialog.Dialog>
+          </AlertDialog.Container>
+        </AlertDialog.Backdrop>
+      </AlertDialog>
     </>
   )
 }

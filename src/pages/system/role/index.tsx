@@ -67,6 +67,7 @@ import { ColumnSettings, useColPrefs, useStickyColumns } from '../../../componen
 import TableCornerOverlays from '../../../components/TableCornerOverlays'
 import SelectionCheckbox from '../../../components/SelectionCheckbox'
 import PageSizeStepper from '../../../components/PageSizeStepper'
+import { useModalBackdropVariant } from '../../../components/useModalBackdrop'
 import type { SysRoleRow } from '../../../types/role'
 import RoleFormModal from './RoleFormModal'
 import DataScopeModal from './DataScopeModal'
@@ -450,7 +451,7 @@ export default function RolePage() {
                 {(row) => (
                   <TableRow id={row.id}>
                     <TableCell key="__select" className="pe-0!">
-                      <SelectionCheckbox label={`选择 ${row.role_name}`} />
+                      <SelectionCheckbox label={`选择 ${row.role_name}`} variant="secondary" />
                     </TableCell>
                     {visibleColumns.map((col) => (
                       <TableCell key={col.key} {...stickyColProps(col.key, false)}>
@@ -570,12 +571,14 @@ interface AlertDialogDeleteProps {
 }
 
 function AlertDialogDelete({ open, name, onOpenChange, onConfirm }: AlertDialogDeleteProps) {
+  const backdropVariant = useModalBackdropVariant()
+
   return (
     <AlertDialog
       isOpen={open}
       onOpenChange={onOpenChange}
     >
-      <AlertDialog.Backdrop>
+      <AlertDialog.Backdrop variant={backdropVariant}>
         <AlertDialog.Container>
           <AlertDialog.Dialog className="sm:max-w-[400px]">
             <AlertDialog.CloseTrigger />
@@ -587,10 +590,10 @@ function AlertDialogDelete({ open, name, onOpenChange, onConfirm }: AlertDialogD
               <p>确定删除角色「{name}」吗？该操作不可撤销。</p>
             </AlertDialog.Body>
             <AlertDialog.Footer>
-              <Button slot="close" variant="tertiary">
+              <Button slot="close" size="sm" variant="tertiary">
                 取消
               </Button>
-              <Button slot="close" variant="danger" onPress={onConfirm}>
+              <Button slot="close" size="sm" variant="danger" onPress={onConfirm}>
                 删除
               </Button>
             </AlertDialog.Footer>

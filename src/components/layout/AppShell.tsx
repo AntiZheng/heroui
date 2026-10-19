@@ -54,10 +54,10 @@ const navTree: NavEntry[] = [
     ],
   },
   {
-    path: '/demo/map',
+    path: '/map',
     label: '地图服务',
     icon: FlaskConical,
-    children: [{ path: '/demo/map', label: '3D地图', icon: MapIcon }],
+    children: [{ path: '/map', label: '3D地图', icon: MapIcon }],
   },
 ]
 

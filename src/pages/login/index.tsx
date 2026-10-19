@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import {
   Button,
   Card,
@@ -8,29 +9,44 @@ import {
   Form,
   Input,
   Label,
+  Link,
   TextField,
   Typography,
 } from '@heroui/react'
 import { getCaptcha, login, getInfo } from '../../api/auth'
+import { getConfigByKey, REGISTER_USER_KEY } from '../../api/config'
 import { useAuthStore } from '../../stores/auth'
 import GlassTilt from '../../components/GlassTilt'
 import glassBg from '../../assets/hero-glass-bg.webp'
 
 export default function LoginPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const setTokens = useAuthStore((s) => s.setTokens)
   const setUserInfo = useAuthStore((s) => s.setUserInfo)
 
-  const [username, setUsername] = useState('')
+  const { data: registerEnabled } = useQuery({
+    queryKey: ['config-key', REGISTER_USER_KEY],
+    queryFn: () => getConfigByKey(REGISTER_USER_KEY, true),
+    retry: false,
+  })
+
+  const [username, setUsername] = useState(
+    () => (location.state as { username?: string } | null)?.username ?? '',
+  )
   const [password, setPassword] = useState('')
   const [code, setCode] = useState('')
-  const [captcha, setCaptcha] = useState<{ uuid: string; img: string }>({ uuid: '', img: '' })
+  const [captcha, setCaptcha] = useState<{ uuid: string; img: string; enabled: boolean | null }>({
+    uuid: '',
+    img: '',
+    enabled: null,
+  })
   const [submitting, setSubmitting] = useState(false)
 
   const refreshCaptcha = async () => {
     try {
       const res = await getCaptcha()
-      setCaptcha({ uuid: res.uuid, img: res.img })
+      setCaptcha({ uuid: res.uuid, img: res.img, enabled: res.captchaEnabled })
     } catch {
       // 验证码失败时用户可点击重试
     }
@@ -51,7 +67,7 @@ export default function LoginPage() {
       setUserInfo(info.user, info.roles, info.permissions)
       navigate('/', { replace: true })
     } catch {
-      await refreshCaptcha()
+      if (captcha.enabled !== false) await refreshCaptcha()
       setCode('')
     } finally {
       setSubmitting(false)
@@ -80,30 +96,40 @@ export default function LoginPage() {
                 <Input type="password" placeholder="请输入密码" autoComplete="current-password" className="bg-white/40! backdrop-blur-sm" />
                 <FieldError />
               </TextField>
-              <div className="flex items-end gap-2">
-                <TextField value={code} onChange={setCode} name="code" isRequired className="flex-1">
-                  <Label>验证码</Label>
-                  <Input placeholder="请输入验证码" autoComplete="off" className="bg-white/40! backdrop-blur-sm" />
-                  <FieldError />
-                </TextField>
-                {captcha.img ? (
-                  <img
-                    src={captcha.img}
-                    alt="验证码，点击刷新"
-                    title="点击刷新"
-                    className="h-10 cursor-pointer rounded-lg"
-                    onClick={refreshCaptcha}
-                  />
-                ) : (
-                  <Button variant="secondary" type="button" onPress={refreshCaptcha}>
-                    获取
-                  </Button>
-                )}
-              </div>
+              {captcha.enabled !== false && (
+                <div className="flex items-end gap-2">
+                  <TextField value={code} onChange={setCode} name="code" isRequired className="flex-1">
+                    <Label>验证码</Label>
+                    <Input placeholder="请输入验证码" autoComplete="off" className="bg-white/40! backdrop-blur-sm" />
+                    <FieldError />
+                  </TextField>
+                  {captcha.img ? (
+                    <img
+                      src={captcha.img}
+                      alt="验证码，点击刷新"
+                      title="点击刷新"
+                      className="h-10 cursor-pointer rounded-lg"
+                      onClick={refreshCaptcha}
+                    />
+                  ) : (
+                    <Button variant="secondary" type="button" onPress={refreshCaptcha}>
+                      获取
+                    </Button>
+                  )}
+                </div>
+              )}
               <Button type="submit" variant="primary" size="sm" isPending={submitting}>
                 登 录
               </Button>
             </Form>
+            {registerEnabled === 'true' && (
+              <div className="flex items-center justify-center gap-1 text-[12px] text-muted">
+                <span>还没有账号？</span>
+                <Link onPress={() => navigate('/register')} className="text-[12px]">
+                  立即注册
+                </Link>
+              </div>
+            )}
           </CardContent>
         </Card>
       </GlassTilt>

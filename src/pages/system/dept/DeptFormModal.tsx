@@ -1,31 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import {
-  Button,
   Input,
   Label,
   ListBox,
   ListBoxItem,
-  ModalBackdrop,
-  ModalBody,
-  ModalContainer,
-  ModalDialog,
-  ModalFooter,
-  ModalHeader,
-  ModalRoot,
   SelectIndicator,
   SelectPopover,
   SelectRoot,
   SelectTrigger,
   SelectValue,
-  Switch,
-  SwitchContent,
-  SwitchControl,
-  SwitchThumb,
   TextField,
   toast,
-  useOverlayState,
 } from '@heroui/react'
+import { Building2 } from 'lucide-react'
+import FormModal from '../../../components/FormModal'
+import { FormSection, FormSwitch } from '../../../components/FormSection'
 import { addDept, editDept } from '../../../api/dept'
 import type { DeptPayload, SysDeptRow } from '../../../types/dept'
 import { computeAncestors, collectSubtreeIds, findRow } from './deptTree'
@@ -50,7 +40,6 @@ const emptyForm = {
 
 export default function DeptFormModal({ isOpen, editing, presetParentId, tree, onClose }: Props) {
   const queryClient = useQueryClient()
-  const state = useOverlayState({ isOpen, onOpenChange: (v) => !v && onClose() })
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
 
@@ -126,87 +115,84 @@ export default function DeptFormModal({ isOpen, editing, presetParentId, tree, o
   }
 
   return (
-    <ModalRoot state={state}>
-      <ModalBackdrop>
-        <ModalContainer size="lg">
-          <ModalDialog>
-            <ModalHeader>{editing ? '编辑部门' : '新增部门'}</ModalHeader>
-            <ModalBody className="flex flex-col gap-4">
-              <div className="grid grid-cols-2 gap-4">
-                <SelectRoot
-                  aria-label="上级部门"
-                  selectedKey={form.parentId}
-                  onSelectionChange={(key) => {
-                    if (key != null) setForm((f) => ({ ...f, parentId: String(key) }))
-                  }}
-                >
-                  <Label>上级部门</Label>
-                  <SelectTrigger>
-                    <SelectValue />
-                    <SelectIndicator />
-                  </SelectTrigger>
-                  <SelectPopover>
-                    <ListBox>
-                      {parentOptions.map((opt) => (
-                        <ListBoxItem key={String(opt.id)} id={String(opt.id)}>
-                          {opt.label}
-                        </ListBoxItem>
-                      ))}
-                    </ListBox>
-                  </SelectPopover>
-                </SelectRoot>
-                <TextField
-                  value={form.deptName}
-                  onChange={(v) => setForm((f) => ({ ...f, deptName: v }))}
-                  isRequired
-                >
-                  <Label>部门名称</Label>
-                  <Input />
-                </TextField>
-                <TextField
-                  value={form.orderNum}
-                  onChange={(v) => setForm((f) => ({ ...f, orderNum: v }))}
-                >
-                  <Label>显示排序</Label>
-                  <Input inputMode="numeric" />
-                </TextField>
-                <TextField value={form.leader} onChange={(v) => setForm((f) => ({ ...f, leader: v }))}>
-                  <Label>负责人</Label>
-                  <Input />
-                </TextField>
-                <TextField value={form.phone} onChange={(v) => setForm((f) => ({ ...f, phone: v }))}>
-                  <Label>联系电话</Label>
-                  <Input />
-                </TextField>
-                <TextField value={form.email} onChange={(v) => setForm((f) => ({ ...f, email: v }))}>
-                  <Label>邮箱</Label>
-                  <Input />
-                </TextField>
-              </div>
-              <Switch
-                isSelected={form.status === '0'}
-                onChange={(v) => setForm((f) => ({ ...f, status: v ? '0' : '1' }))}
-                aria-label="状态正常"
-              >
-                <SwitchContent>
-                  <SwitchControl>
-                    <SwitchThumb />
-                  </SwitchControl>
-                </SwitchContent>
-                状态正常
-              </Switch>
-            </ModalBody>
-            <ModalFooter>
-              <Button variant="secondary" onPress={onClose}>
-                取消
-              </Button>
-              <Button variant="primary" isPending={saving} onPress={handleSubmit}>
-                保存
-              </Button>
-            </ModalFooter>
-          </ModalDialog>
-        </ModalContainer>
-      </ModalBackdrop>
-    </ModalRoot>
+    <FormModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={editing ? '编辑部门' : '新增部门'}
+      icon={Building2}
+      size="lg"
+      saving={saving}
+      onSubmit={handleSubmit}
+    >
+      <FormSection title="归属信息">
+        <div className="grid grid-cols-2 gap-4">
+          <SelectRoot
+            aria-label="上级部门"
+            selectedKey={form.parentId}
+            onSelectionChange={(key) => {
+              if (key != null) setForm((f) => ({ ...f, parentId: String(key) }))
+            }}
+          >
+            <Label>上级部门</Label>
+            <SelectTrigger>
+              <SelectValue />
+              <SelectIndicator />
+            </SelectTrigger>
+            <SelectPopover>
+              <ListBox>
+                {parentOptions.map((opt) => (
+                  <ListBoxItem key={String(opt.id)} id={String(opt.id)}>
+                    {opt.label}
+                  </ListBoxItem>
+                ))}
+              </ListBox>
+            </SelectPopover>
+          </SelectRoot>
+          <TextField
+            value={form.deptName}
+            onChange={(v) => setForm((f) => ({ ...f, deptName: v }))}
+            isRequired
+          >
+            <Label>部门名称</Label>
+            <Input />
+          </TextField>
+          <TextField
+            value={form.orderNum}
+            onChange={(v) => setForm((f) => ({ ...f, orderNum: v }))}
+          >
+            <Label>显示排序</Label>
+            <Input inputMode="numeric" />
+          </TextField>
+        </div>
+      </FormSection>
+
+      <FormSection title="联系信息">
+        <div className="grid grid-cols-2 gap-4">
+          <TextField
+            value={form.leader}
+            onChange={(v) => setForm((f) => ({ ...f, leader: v }))}
+          >
+            <Label>负责人</Label>
+            <Input />
+          </TextField>
+          <TextField value={form.phone} onChange={(v) => setForm((f) => ({ ...f, phone: v }))}>
+            <Label>联系电话</Label>
+            <Input />
+          </TextField>
+          <TextField value={form.email} onChange={(v) => setForm((f) => ({ ...f, email: v }))}>
+            <Label>邮箱</Label>
+            <Input />
+          </TextField>
+        </div>
+      </FormSection>
+
+      <FormSection title="部门状态" tone="success">
+        <FormSwitch
+          label="启用部门"
+          isSelected={form.status === '0'}
+          onChange={(v) => setForm((f) => ({ ...f, status: v ? '0' : '1' }))}
+        />
+      </FormSection>
+    </FormModal>
   )
 }

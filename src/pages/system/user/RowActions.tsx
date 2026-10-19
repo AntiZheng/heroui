@@ -6,23 +6,17 @@ import {
   Button,
   Input,
   Label,
-  ModalBackdrop,
-  ModalBody,
-  ModalContainer,
-  ModalDialog,
-  ModalFooter,
-  ModalHeader,
-  ModalRoot,
   TextField,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
   toast,
-  useOverlayState,
 } from '@heroui/react'
 import { deleteUsers, resetPwd } from '../../../api/user'
 import { hasPermission } from '../../../stores/auth'
 import type { SysUserRow } from '../../../types/user'
+import FormModal from '../../../components/FormModal'
+import { useModalBackdropVariant } from '../../../components/useModalBackdrop'
 
 interface Props {
   row: SysUserRow
@@ -31,7 +25,8 @@ interface Props {
 
 export default function RowActions({ row, onEdit }: Props) {
   const queryClient = useQueryClient()
-  const resetState = useOverlayState()
+  const backdropVariant = useModalBackdropVariant()
+  const [resetOpen, setResetOpen] = useState(false)
   const [newPwd, setNewPwd] = useState('')
   const [deleteOpen, setDeleteOpen] = useState(false)
 
@@ -61,7 +56,7 @@ export default function RowActions({ row, onEdit }: Props) {
       return
     }
     toast('成功', { description: '密码已重置', variant: 'success' })
-    resetState.close()
+    setResetOpen(false)
     setNewPwd('')
   }
 
@@ -80,7 +75,7 @@ export default function RowActions({ row, onEdit }: Props) {
       {hasPermission('system:user:resetPwd') && (
         <Tooltip>
           <TooltipTrigger>
-            <Button size="sm" variant="tertiary" isIconOnly className="rounded-full!" onPress={resetState.open} aria-label="重置密码">
+            <Button size="sm" variant="tertiary" isIconOnly className="rounded-full!" onPress={() => setResetOpen(true)} aria-label="重置密码">
               <KeyRound size={12} className="size-3!" aria-hidden />
             </Button>
           </TooltipTrigger>
@@ -110,7 +105,7 @@ export default function RowActions({ row, onEdit }: Props) {
               if (!isOpen) setDeleteOpen(false)
             }}
           >
-            <AlertDialog.Backdrop>
+            <AlertDialog.Backdrop variant={backdropVariant}>
               <AlertDialog.Container>
                 <AlertDialog.Dialog className="sm:max-w-[400px]">
                   <AlertDialog.CloseTrigger />
@@ -122,10 +117,10 @@ export default function RowActions({ row, onEdit }: Props) {
                     <p>确定删除用户「{row.user_name}」吗？该操作不可撤销。</p>
                   </AlertDialog.Body>
                   <AlertDialog.Footer>
-                    <Button slot="close" variant="tertiary">
+                    <Button slot="close" size="sm" variant="tertiary">
                       取消
                     </Button>
-                    <Button slot="close" variant="danger" onPress={handleDelete}>
+                    <Button slot="close" size="sm" variant="danger" onPress={handleDelete}>
                       删除
                     </Button>
                   </AlertDialog.Footer>
@@ -135,29 +130,25 @@ export default function RowActions({ row, onEdit }: Props) {
           </AlertDialog>
         </>
       )}
-      <ModalRoot state={resetState}>
-        <ModalBackdrop>
-          <ModalContainer size="sm">
-            <ModalDialog>
-              <ModalHeader>重置密码 — {row.user_name}</ModalHeader>
-              <ModalBody>
-                <TextField value={newPwd} onChange={setNewPwd}>
-                  <Label>新密码</Label>
-                  <Input type="password" />
-                </TextField>
-              </ModalBody>
-              <ModalFooter>
-                <Button variant="secondary" onPress={resetState.close}>
-                  取消
-                </Button>
-                <Button variant="primary" onPress={handleResetPwd}>
-                  确认重置
-                </Button>
-              </ModalFooter>
-            </ModalDialog>
-          </ModalContainer>
-        </ModalBackdrop>
-      </ModalRoot>
+      <FormModal
+        isOpen={resetOpen}
+        onClose={() => {
+          setResetOpen(false)
+          setNewPwd('')
+        }}
+        title="重置密码"
+        meta={`用户：${row.user_name}`}
+        icon={KeyRound}
+        tone="danger"
+        size="sm"
+        onSubmit={handleResetPwd}
+        submitLabel="确认重置"
+      >
+        <TextField value={newPwd} onChange={setNewPwd}>
+          <Label>新密码</Label>
+          <Input type="password" />
+        </TextField>
+      </FormModal>
     </div>
   )
 }

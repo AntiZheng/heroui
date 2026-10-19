@@ -45,6 +45,7 @@ import { deleteDepts, getDeptList, type DeptListQuery } from '../../../api/dept'
 import { hasPermission } from '../../../stores/auth'
 import { ColumnSettings, useColPrefs, useStickyColumns } from '../../../components/ColumnSettings'
 import TableCornerOverlays from '../../../components/TableCornerOverlays'
+import { useModalBackdropVariant } from '../../../components/useModalBackdrop'
 import type { SysDeptRow } from '../../../types/dept'
 import { flattenVisible } from './deptTree'
 import DeptFormModal from './DeptFormModal'
@@ -62,6 +63,7 @@ function countAll(rows: SysDeptRow[]): number {
 }
 
 export default function DeptPage() {
+  const backdropVariant = useModalBackdropVariant()
   const [query, setQuery] = useState<DeptListQuery>({})
   const [nameInput, setNameInput] = useState('')
   const [statusInput, setStatusInput] = useState<string | null>(null)
@@ -378,7 +380,7 @@ export default function DeptPage() {
           if (!isOpen) setDeleting(null)
         }}
       >
-        <AlertDialog.Backdrop>
+        <AlertDialog.Backdrop variant={backdropVariant}>
           <AlertDialog.Container>
             <AlertDialog.Dialog className="sm:max-w-[400px]">
               <AlertDialog.CloseTrigger />
@@ -390,10 +392,10 @@ export default function DeptPage() {
                 <p>确定删除部门「{deleting?.dept_name}」吗？该操作不可撤销。</p>
               </AlertDialog.Body>
               <AlertDialog.Footer>
-                <Button slot="close" variant="tertiary">
+                <Button slot="close" size="sm" variant="tertiary">
                   取消
                 </Button>
-                <Button slot="close" variant="danger" onPress={handleDelete}>
+                <Button slot="close" size="sm" variant="danger" onPress={handleDelete}>
                   删除
                 </Button>
               </AlertDialog.Footer>

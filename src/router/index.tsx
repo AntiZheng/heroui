@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { lazy, Suspense, type ReactElement } from 'react'
 import AppShell from '../components/layout/AppShell'
 import LoginPage from '../pages/login'
+import RegisterPage from '../pages/register'
 import HomePage from '../pages/home'
 import UserPage from '../pages/system/user'
 import DeptPage from '../pages/system/dept'
@@ -11,7 +12,7 @@ import DictDataPage from '../pages/system/dict/data'
 import ConfigPage from '../pages/system/config'
 import JobPage from '../pages/system/job'
 
-const MapDemoPage = lazy(() => import('../pages/demo/map'))
+const MapPage = lazy(() => import('../pages/map'))
 import { useAuthStore } from '../stores/auth'
 
 function RequireAuth({ children }: { children: ReactElement }) {
@@ -23,6 +24,7 @@ export default function AppRouter() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
       <Route
         path="/"
         element={
@@ -39,7 +41,7 @@ export default function AppRouter() {
         <Route path="system/dict/data/:dictType" element={<DictDataPage />} />
         <Route path="system/config" element={<ConfigPage />} />
         <Route path="system/job" element={<JobPage />} />
-        <Route path="demo/map" element={<Suspense><MapDemoPage /></Suspense>} />
+        <Route path="map" element={<Suspense><MapPage /></Suspense>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

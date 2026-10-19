@@ -1,15 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  Button,
-  Label,
-  ModalBackdrop,
-  ModalBody,
-  ModalContainer,
-  ModalDialog,
-  ModalFooter,
-  ModalHeader,
-  ModalRoot,
   Radio,
   RadioContent,
   RadioControl,
@@ -17,13 +8,15 @@ import {
   RadioIndicator,
   Spinner,
   toast,
-  useOverlayState,
 } from '@heroui/react'
+import { LockKeyhole } from 'lucide-react'
 import { editRoleDataScope } from '../../../api/role'
 import { getRoleDeptTree } from '../../../api/menu'
 import { getDeptList } from '../../../api/dept'
 import type { SysRoleRow } from '../../../types/role'
 import type { SysDeptRow } from '../../../types/dept'
+import FormModal from '../../../components/FormModal'
+import { FormSection } from '../../../components/FormSection'
 import CheckboxTree, { collectCheckedIds, expandCheckedKeys, type TreeOption } from './CheckboxTree'
 
 interface Props {
@@ -50,7 +43,6 @@ function toTreeOptions(rows: SysDeptRow[]): TreeOption[] {
 
 export default function DataScopeModal({ isOpen, role, onClose }: Props) {
   const queryClient = useQueryClient()
-  const state = useOverlayState({ isOpen, onOpenChange: (v) => !v && onClose() })
   const [scope, setScope] = useState('1')
   const [checked, setChecked] = useState<Set<number>>(new Set())
   const [saving, setSaving] = useState(false)
@@ -102,57 +94,50 @@ export default function DataScopeModal({ isOpen, role, onClose }: Props) {
   }
 
   return (
-    <ModalRoot state={state}>
-      <ModalBackdrop>
-        <ModalContainer size="md">
-          <ModalDialog>
-            <ModalHeader>数据权限 — {role?.role_name}</ModalHeader>
-            <ModalBody className="flex flex-col gap-4">
-              <RadioGroup
-                aria-label="数据权限范围"
-                value={scope}
-                onChange={(v: string) => setScope(v)}
-              >
-                {SCOPE_OPTIONS.map((opt) => (
-                  <Radio key={opt.value} value={opt.value}>
-                    <RadioContent>
-                      <RadioControl>
-                        <RadioIndicator />
-                      </RadioControl>
-                      {opt.label}
-                    </RadioContent>
-                  </Radio>
-                ))}
-              </RadioGroup>
-              {scope === '2' && (
-                <div>
-                  <Label className="mb-2 block">部门权限</Label>
-                  {deptTree ? (
-                    <CheckboxTree
-                      nodes={toTreeOptions(deptTree)}
-                      checked={checked}
-                      onChange={setChecked}
-                      className="max-h-56 overflow-auto rounded-xl border border-separator p-3"
-                    />
-                  ) : (
-                    <div className="flex justify-center rounded-xl border border-separator py-6">
-                      <Spinner />
-                    </div>
-                  )}
-                </div>
-              )}
-            </ModalBody>
-            <ModalFooter>
-              <Button variant="secondary" onPress={onClose}>
-                取消
-              </Button>
-              <Button variant="primary" isPending={saving} onPress={handleSave}>
-                保存
-              </Button>
-            </ModalFooter>
-          </ModalDialog>
-        </ModalContainer>
-      </ModalBackdrop>
-    </ModalRoot>
+    <FormModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="数据权限"
+      meta={`角色：${role?.role_name ?? ''}`}
+      icon={LockKeyhole}
+      size="md"
+      saving={saving}
+      onSubmit={handleSave}
+    >
+      <FormSection title="权限范围">
+        <RadioGroup
+          aria-label="数据权限范围"
+          value={scope}
+          onChange={(v: string) => setScope(v)}
+        >
+          {SCOPE_OPTIONS.map((opt) => (
+            <Radio key={opt.value} value={opt.value}>
+              <RadioContent>
+                <RadioControl>
+                  <RadioIndicator />
+                </RadioControl>
+                {opt.label}
+              </RadioContent>
+            </Radio>
+          ))}
+        </RadioGroup>
+      </FormSection>
+      {scope === '2' && (
+        <FormSection title="部门权限">
+          {deptTree ? (
+            <CheckboxTree
+              nodes={toTreeOptions(deptTree)}
+              checked={checked}
+              onChange={setChecked}
+              className="max-h-56 overflow-auto rounded-xl border border-accent/20 bg-accent-soft/60 p-3"
+            />
+          ) : (
+            <div className="flex justify-center rounded-xl border border-accent/20 bg-accent-soft/60 py-6">
+              <Spinner />
+            </div>
+          )}
+        </FormSection>
+      )}
+    </FormModal>
   )
 }

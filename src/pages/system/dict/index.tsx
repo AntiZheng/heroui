@@ -57,6 +57,7 @@ import { ColumnSettings, useColPrefs, useStickyColumns } from '../../../componen
 import TableCornerOverlays from '../../../components/TableCornerOverlays'
 import SelectionCheckbox from '../../../components/SelectionCheckbox'
 import PageSizeStepper from '../../../components/PageSizeStepper'
+import { useModalBackdropVariant } from '../../../components/useModalBackdrop'
 import type { SysDictTypeRow } from '../../../types/dict'
 import DictTypeFormModal from './DictTypeFormModal'
 
@@ -87,6 +88,7 @@ function pageWindow(total: number, current: number): (number | '…')[] {
 export default function DictPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const backdropVariant = useModalBackdropVariant()
   const [query, setQuery] = useState<DictTypeListQuery>({ pageNum: 1, pageSize: PAGE_SIZE })
   const [nameInput, setNameInput] = useState('')
   const [typeInput, setTypeInput] = useState('')
@@ -395,7 +397,7 @@ export default function DictPage() {
                 {(row) => (
                   <TableRow id={row.id}>
                     <TableCell key="__select" className="pe-0!">
-                      <SelectionCheckbox label={`选择 ${row.dict_name}`} />
+                      <SelectionCheckbox label={`选择 ${row.dict_name}`} variant="secondary" />
                     </TableCell>
                     {visibleColumns.map((col) => (
                       <TableCell key={col.key} {...stickyColProps(col.key, false)}>
@@ -491,7 +493,7 @@ export default function DictPage() {
           if (!isOpen) setDeleting(null)
         }}
       >
-        <AlertDialog.Backdrop>
+        <AlertDialog.Backdrop variant={backdropVariant}>
           <AlertDialog.Container>
             <AlertDialog.Dialog className="sm:max-w-[400px]">
               <AlertDialog.CloseTrigger />
@@ -503,10 +505,10 @@ export default function DictPage() {
                 <p>确定删除字典类型「{deleting?.dict_name}」吗？建议先清空其下字典数据。</p>
               </AlertDialog.Body>
               <AlertDialog.Footer>
-                <Button slot="close" variant="tertiary">
+                <Button slot="close" size="sm" variant="tertiary">
                   取消
                 </Button>
-                <Button slot="close" variant="danger" onPress={handleDelete}>
+                <Button slot="close" size="sm" variant="danger" onPress={handleDelete}>
                   删除
                 </Button>
               </AlertDialog.Footer>

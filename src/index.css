@@ -66,6 +66,27 @@
   filter: invert(1);
 }
 
+/* 全屏 3D 地图的太空背景：多层不同密度的径向渐变点阵，避免肉眼可见的平铺网感 */
+.map-starfield {
+  background-color: #04060d;
+  background-image:
+    radial-gradient(1px 1px at 20px 30px, rgba(255, 255, 255, 0.9), transparent 1.6px),
+    radial-gradient(1px 1px at 76px 118px, rgba(255, 255, 255, 0.5), transparent 1.6px),
+    radial-gradient(1.4px 1.4px at 132px 58px, rgba(255, 255, 255, 0.72), transparent 2px),
+    radial-gradient(1px 1px at 186px 152px, rgba(191, 219, 254, 0.55), transparent 1.6px),
+    radial-gradient(1.6px 1.6px at 94px 194px, rgba(255, 255, 255, 0.8), transparent 2.4px),
+    radial-gradient(1px 1px at 228px 216px, rgba(255, 255, 255, 0.42), transparent 1.6px),
+    radial-gradient(1.2px 1.2px at 262px 88px, rgba(186, 230, 253, 0.6), transparent 2px);
+  background-size:
+    240px 240px,
+    320px 320px,
+    280px 280px,
+    360px 360px,
+    420px 420px,
+    300px 300px,
+    440px 440px;
+}
+
 /* 全局按钮字号压到 12px：HeroUI .button 基类默认 text-sm（14px） */
 .button {
   font-size: 0.75rem;

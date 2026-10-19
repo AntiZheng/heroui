@@ -330,7 +330,7 @@ export default function UserPage() {
                 {(row) => (
                   <TableRow id={row.id}>
                     <TableCell key="__select" className="pe-0!">
-                      <SelectionCheckbox label={`选择 ${row.user_name}`} />
+                      <SelectionCheckbox label={`选择 ${row.user_name}`} variant="secondary" />
                     </TableCell>
                     {visibleColumns.map((col) => (
                       <TableCell key={col.key} {...stickyColProps(col.key, false)}>

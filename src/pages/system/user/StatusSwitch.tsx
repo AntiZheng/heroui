@@ -18,7 +18,13 @@ export default function StatusSwitch({ row }: { row: SysUserRow }) {
   }
 
   return (
-    <Switch isSelected={status === '0'} onChange={handleChange} aria-label="启用状态">
+    <Switch
+      size="sm"
+      isSelected={status === '0'}
+      onChange={handleChange}
+      aria-label="启用状态"
+      className="[--switch-control-bg-checked:var(--success)] [--switch-control-bg-checked-hover:var(--success-hover)]"
+    >
       <SwitchContent>
         <SwitchControl>
           <SwitchThumb />
