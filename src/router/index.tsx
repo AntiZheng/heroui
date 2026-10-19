@@ -9,6 +9,7 @@ import RolePage from '../pages/system/role'
 import DictPage from '../pages/system/dict'
 import DictDataPage from '../pages/system/dict/data'
 import ConfigPage from '../pages/system/config'
+import JobPage from '../pages/system/job'
 
 const MapDemoPage = lazy(() => import('../pages/demo/map'))
 import { useAuthStore } from '../stores/auth'
@@ -37,6 +38,7 @@ export default function AppRouter() {
         <Route path="system/dict" element={<DictPage />} />
         <Route path="system/dict/data/:dictType" element={<DictDataPage />} />
         <Route path="system/config" element={<ConfigPage />} />
+        <Route path="system/job" element={<JobPage />} />
         <Route path="demo/map" element={<Suspense><MapDemoPage /></Suspense>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

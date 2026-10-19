@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Sun,
+  Timer,
   Users,
 } from 'lucide-react'
 import { useAuthStore } from '../../stores/auth'
@@ -49,6 +50,7 @@ const navTree: NavEntry[] = [
       { path: '/system/role', label: '角色管理', icon: ShieldCheck },
       { path: '/system/dict', label: '字典管理', icon: BookA },
       { path: '/system/config', label: '参数设置', icon: SlidersHorizontal },
+      { path: '/system/job', label: '定时任务', icon: Timer },
     ],
   },
   {
