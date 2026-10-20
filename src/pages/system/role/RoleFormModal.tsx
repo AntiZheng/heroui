@@ -124,7 +124,7 @@ export default function RoleFormModal({ isOpen, editing, onClose }: Props) {
             isRequired
           >
             <Label>权限字符</Label>
-            <Input placeholder="如 admin" />
+            <Input />
           </TextField>
           <TextField
             value={form.roleSort}

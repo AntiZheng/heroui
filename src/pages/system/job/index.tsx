@@ -228,27 +228,42 @@ export default function JobPage() {
     switch (key) {
       case 'job_group':
         return optionLabel(JOB_GROUP_OPTIONS, (row.job_group ?? '').toUpperCase())
-      case 'status':
-        return (
-          <div className="flex items-center gap-2">
-            {hasPermission('system:job:edit') && (
-              <Switch
-                isSelected={statusOf(row) === '0'}
-                onChange={(checked) => handleStatusToggle(row, checked)}
-                aria-label="任务状态"
-              >
-                <SwitchContent>
-                  <SwitchControl>
-                    <SwitchThumb />
-                  </SwitchControl>
-                </SwitchContent>
-              </Switch>
-            )}
-            <Chip color={statusOf(row) === '0' ? 'success' : 'danger'} size="sm" variant="soft">
-              {statusOf(row) === '0' ? '正常' : '暂停'}
+      case 'status': {
+        const active = statusOf(row) === '0'
+        const label = active ? '正常' : '暂停'
+        if (!hasPermission('system:job:edit')) {
+          return (
+            <Chip color={active ? 'success' : 'danger'} size="sm" variant="soft">
+              {label}
             </Chip>
-          </div>
+          )
+        }
+        return (
+          <Switch
+            size="sm"
+            isSelected={active}
+            onChange={(checked) => handleStatusToggle(row, checked)}
+            className="group w-fit text-[11px] [--switch-control-bg:var(--danger-soft)] [--switch-control-bg-hover:var(--danger-soft-hover)] [--switch-control-bg-checked:var(--success-soft)] [--switch-control-bg-checked-hover:var(--success-soft-hover)]"
+          >
+            <SwitchContent className="w-fit">
+              <SwitchControl className="h-6! w-16! rounded-full!">
+                <SwitchThumb className="size-5! rounded-full! group-data-[selected=true]:ms-[calc(100%-1.375rem)]" />
+                <span
+                  aria-hidden
+                  className={`pointer-events-none absolute inset-y-0 flex items-center font-medium ${
+                    active
+                      ? 'left-2 text-success-soft-foreground'
+                      : 'right-1.5 text-danger-soft-foreground'
+                  }`}
+                >
+                  {label}
+                </span>
+              </SwitchControl>
+              <span className="sr-only">任务状态 {label}</span>
+            </SwitchContent>
+          </Switch>
         )
+      }
       case 'concurrent':
         return optionLabel(CONCURRENT_OPTIONS, row.concurrent)
       case 'misfire_policy':

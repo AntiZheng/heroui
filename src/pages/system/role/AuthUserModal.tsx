@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
+import type { Selection } from 'react-aria-components'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  Badge,
   Button,
-  Checkbox,
   EmptyState,
+  Label,
   SearchField,
   Spinner,
   TableBody,
@@ -32,6 +34,7 @@ import {
 import type { SysRoleRow } from '../../../types/role'
 import type { SysUserRow } from '../../../types/user'
 import FormModal from '../../../components/FormModal'
+import SelectionCheckbox from '../../../components/SelectionCheckbox'
 
 interface Props {
   isOpen: boolean
@@ -45,18 +48,16 @@ export default function AuthUserModal({ isOpen, role, onClose }: Props) {
   const queryClient = useQueryClient()
   const [tab, setTab] = useState('allocated')
   const [pageNum, setPageNum] = useState(1)
-  const [nameInput, setNameInput] = useState('')
-  const [phoneInput, setPhoneInput] = useState('')
+  const [keyword, setKeyword] = useState('')
   const [filters, setFilters] = useState<AuthUserQuery>({} as AuthUserQuery)
-  const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [selected, setSelected] = useState<Selection>(new Set())
   const [acting, setActing] = useState(false)
 
   useEffect(() => {
     if (isOpen) {
       setTab('allocated')
       setPageNum(1)
-      setNameInput('')
-      setPhoneInput('')
+      setKeyword('')
       setFilters({} as AuthUserQuery)
       setSelected(new Set())
     }
@@ -89,23 +90,8 @@ export default function AuthUserModal({ isOpen, role, onClose }: Props) {
     queryClient.invalidateQueries({ queryKey: ['role-auth-unallocated', role?.role_id] })
   }
 
-  const toggleRow = (id: number, sel: boolean) => {
-    setSelected((prev) => {
-      const next = new Set(prev)
-      if (sel) next.add(id)
-      else next.delete(id)
-      return next
-    })
-  }
-
-  const allPageSelected = rows.length > 0 && rows.every((r) => selected.has(r.user_id))
-  const toggleAllPage = (sel: boolean) => {
-    setSelected((prev) => {
-      const next = new Set(prev)
-      rows.forEach((r) => (sel ? next.add(r.user_id) : next.delete(r.user_id)))
-      return next
-    })
-  }
+  const selectedIds =
+    selected === 'all' ? rows.map((r) => r.user_id) : [...selected].map(Number)
 
   const run = async (fn: () => Promise<unknown>, successMsg: string) => {
     setActing(true)
@@ -122,11 +108,11 @@ export default function AuthUserModal({ isOpen, role, onClose }: Props) {
   }
 
   const handleBatch = () => {
-    if (!role || selected.size === 0) {
+    if (!role || selectedIds.length === 0) {
       toast('提示', { description: '请先勾选用户', variant: 'warning' })
       return
     }
-    const ids = [...selected]
+    const ids = selectedIds
     if (isAllocatedTab) {
       void run(() => cancelAllAuthUsers(role.role_id, ids), '取消授权成功')
     } else {
@@ -134,15 +120,26 @@ export default function AuthUserModal({ isOpen, role, onClose }: Props) {
     }
   }
 
-  const search = () =>
-    setFilters({ pageNum: 1, pageSize: PAGE_SIZE, userName: nameInput || undefined, phonenumber: phoneInput || undefined })
+  // 固定按账号搜索
+  const search = () => {
+    const q = keyword.trim()
+    setPageNum(1)
+    setFilters((q ? { userName: q } : {}) as AuthUserQuery)
+  }
+
+  const changeKeyword = (value: string) => {
+    setKeyword(value)
+    if (!value) {
+      setPageNum(1)
+      setFilters({} as AuthUserQuery)
+    }
+  }
 
   const switchTab = (key: string | null) => {
     if (!key) return
     setTab(key)
     setPageNum(1)
-    setNameInput('')
-    setPhoneInput('')
+    setKeyword('')
     setFilters({} as AuthUserQuery)
     setSelected(new Set())
   }
@@ -163,40 +160,57 @@ export default function AuthUserModal({ isOpen, role, onClose }: Props) {
     >
       <Tabs
         selectedKey={tab}
+        className="mx-auto w-fit"
         onSelectionChange={(key) => {
           if (key != null) switchTab(String(key))
         }}
       >
-        <Tabs.List>
-          <Tabs.Tab id="allocated">已分配用户</Tabs.Tab>
-          <Tabs.Tab id="unallocated">未分配用户</Tabs.Tab>
-        </Tabs.List>
+        <Tabs.ListContainer>
+          <Tabs.List>
+            <Tabs.Tab id="allocated" className="gap-1">
+              已分配用户
+              {allocated && (
+                <Badge
+                  size="sm"
+                  variant="soft"
+                  color="success"
+                  className="static! transform-none!"
+                >
+                  {allocated.total}
+                </Badge>
+              )}
+              <Tabs.Indicator />
+            </Tabs.Tab>
+            <Tabs.Tab id="unallocated" className="gap-1">
+              未分配用户
+              {unallocated && (
+                <Badge
+                  size="sm"
+                  variant="soft"
+                  color="warning"
+                  className="static! transform-none!"
+                >
+                  {unallocated.total}
+                </Badge>
+              )}
+              <Tabs.Indicator />
+            </Tabs.Tab>
+          </Tabs.List>
+        </Tabs.ListContainer>
       </Tabs>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-end gap-3">
         <SearchField
           aria-label="按账号搜索"
-          value={nameInput}
-          onChange={setNameInput}
+          value={keyword}
+          onChange={changeKeyword}
           onSubmit={search}
-          className="w-44"
+          className="w-64"
         >
+          <Label className="text-xs font-medium text-muted">账号</Label>
           <SearchField.Group>
             <SearchField.SearchIcon />
-            <SearchField.Input placeholder="搜索账号" className="text-xs!" />
-            <SearchField.ClearButton />
-          </SearchField.Group>
-        </SearchField>
-        <SearchField
-          aria-label="按手机号搜索"
-          value={phoneInput}
-          onChange={setPhoneInput}
-          onSubmit={search}
-          className="w-44"
-        >
-          <SearchField.Group>
-            <SearchField.SearchIcon />
-            <SearchField.Input placeholder="搜索手机号" className="text-xs!" />
+            <SearchField.Input className="text-xs!" />
             <SearchField.ClearButton />
           </SearchField.Group>
         </SearchField>
@@ -222,20 +236,16 @@ export default function AuthUserModal({ isOpen, role, onClose }: Props) {
 
       <div className="cursor-default overflow-hidden rounded-xl border border-accent/20 [&_th]:bg-accent-soft/60">
         <TableRoot variant="secondary">
-          <TableContent aria-label={isAllocatedTab ? '已分配用户' : '未分配用户'}>
+          <TableContent
+            aria-label={isAllocatedTab ? '已分配用户' : '未分配用户'}
+            selectionMode="multiple"
+            selectionBehavior="toggle"
+            selectedKeys={selected}
+            onSelectionChange={setSelected}
+          >
             <TableHeader>
               <TableColumn id="select">
-                <Checkbox
-                  aria-label="全选本页"
-                  isSelected={allPageSelected}
-                  onChange={toggleAllPage}
-                >
-                  <Checkbox.Content>
-                    <Checkbox.Control>
-                      <Checkbox.Indicator />
-                    </Checkbox.Control>
-                  </Checkbox.Content>
-                </Checkbox>
+                <SelectionCheckbox label="全选本页" />
               </TableColumn>
               <TableColumn id="user_name" isRowHeader>
                 账号
@@ -246,7 +256,7 @@ export default function AuthUserModal({ isOpen, role, onClose }: Props) {
             </TableHeader>
             <TableBody
               items={rows.map((r) => ({ ...r, id: r.user_id }))}
-              dependencies={[tab, selected]}
+              dependencies={[tab]}
               renderEmptyState={() =>
                 (isAllocatedTab ? loadingAllocated : loadingUnallocated) ? (
                   <Spinner />
@@ -263,18 +273,10 @@ export default function AuthUserModal({ isOpen, role, onClose }: Props) {
               {(row: SysUserRow & { id: number }) => (
                 <TableRow id={row.id}>
                   <TableCell>
-                    <Checkbox
-                      aria-label={`选择 ${row.user_name}`}
+                    <SelectionCheckbox
+                      label={`选择 ${row.user_name}`}
                       variant="secondary"
-                      isSelected={selected.has(row.user_id)}
-                      onChange={(sel) => toggleRow(row.user_id, sel)}
-                    >
-                      <Checkbox.Content>
-                        <Checkbox.Control>
-                          <Checkbox.Indicator />
-                        </Checkbox.Control>
-                      </Checkbox.Content>
-                    </Checkbox>
+                    />
                   </TableCell>
                   <TableCell>{row.user_name}</TableCell>
                   <TableCell>{row.nick_name}</TableCell>

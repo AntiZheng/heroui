@@ -131,7 +131,7 @@ export default function JobFormModal({ isOpen, editing, onClose }: Props) {
             isRequired
           >
             <Label>任务名称</Label>
-            <Input placeholder="如 清理临时文件" />
+            <Input />
           </TextField>
           <SelectRoot
             aria-label="任务分组"
@@ -161,7 +161,7 @@ export default function JobFormModal({ isOpen, editing, onClose }: Props) {
             isRequired
           >
             <Label>调用目标</Label>
-            <Input placeholder="如 demoTask" />
+            <Input />
           </TextField>
           <TextField
             value={form.cronExpression}
@@ -169,7 +169,7 @@ export default function JobFormModal({ isOpen, editing, onClose }: Props) {
             isRequired
           >
             <Label>cron 表达式</Label>
-            <Input placeholder="*/5 * * * *" className="font-mono" />
+            <Input className="font-mono" />
           </TextField>
         </div>
       </FormSection>
@@ -230,14 +230,14 @@ export default function JobFormModal({ isOpen, editing, onClose }: Props) {
             onChange={(v) => setForm((f) => ({ ...f, jobArgs: v }))}
           >
             <Label>位置参数</Label>
-            <Input placeholder="多个参数用英文逗号分隔" />
+            <Input />
           </TextField>
           <TextField
             value={form.jobKwargs}
             onChange={(v) => setForm((f) => ({ ...f, jobKwargs: v }))}
           >
             <Label>关键字参数</Label>
-            <Input placeholder="如 source=a,target=b" />
+            <Input />
           </TextField>
         </div>
       </FormSection>

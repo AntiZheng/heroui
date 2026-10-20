@@ -49,7 +49,6 @@ export default function LinkDialog({ isOpen, initialHref, hasLink, onClose, onAp
         <Label>链接地址</Label>
         <Input
           autoFocus
-          placeholder="https://example.com"
           onKeyDown={(event) => {
             if (event.key === 'Enter') {
               event.preventDefault()

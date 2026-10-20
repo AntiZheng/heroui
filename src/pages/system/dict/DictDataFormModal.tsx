@@ -119,7 +119,7 @@ export default function DictDataFormModal({ isOpen, editing, dictType, onClose }
             isRequired
           >
             <Label>标签</Label>
-            <Input placeholder="如 男" />
+            <Input />
           </TextField>
           <TextField
             value={form.dictValue}
@@ -127,7 +127,7 @@ export default function DictDataFormModal({ isOpen, editing, dictType, onClose }
             isRequired
           >
             <Label>键值</Label>
-            <Input placeholder="如 0" />
+            <Input />
           </TextField>
           <TextField
             value={form.dictSort}

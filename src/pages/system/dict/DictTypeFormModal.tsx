@@ -87,7 +87,7 @@ export default function DictTypeFormModal({ isOpen, editing, onClose }: Props) {
             isRequired
           >
             <Label>字典名称</Label>
-            <Input placeholder="如 用户性别" />
+            <Input />
           </TextField>
           <TextField
             value={form.dictType}
@@ -96,7 +96,7 @@ export default function DictTypeFormModal({ isOpen, editing, onClose }: Props) {
             isDisabled={!!editing}
           >
             <Label>字典类型</Label>
-            {editing ? <ReadOnlyInput /> : <Input placeholder="如 sys_user_sex" />}
+            {editing ? <ReadOnlyInput /> : <Input />}
           </TextField>
         </div>
       </FormSection>

@@ -110,7 +110,7 @@ export default function ConfigFormModal({ isOpen, editing, onClose }: Props) {
             isRequired
           >
             <Label>参数名称</Label>
-            <Input placeholder="如 用户初始密码" />
+            <Input />
           </TextField>
           <TextField
             value={form.configKey}
@@ -129,7 +129,7 @@ export default function ConfigFormModal({ isOpen, editing, onClose }: Props) {
             {editing ? (
               <ReadOnlyInput />
             ) : (
-              <Input placeholder="如 sys.user.initPassword" />
+              <Input />
             )}
           </TextField>
           {isBackdropConfig ? (
@@ -162,7 +162,7 @@ export default function ConfigFormModal({ isOpen, editing, onClose }: Props) {
               isRequired
             >
               <Label>参数键值</Label>
-              <Input placeholder="如 123456" />
+              <Input />
             </TextField>
           )}
         </div>

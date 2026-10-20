@@ -15,7 +15,6 @@ export interface AuthUserQuery {
   pageNum: number
   pageSize: number
   userName?: string
-  phonenumber?: string
 }
 
 // changeStatus/dataScope 走 EditRole schema，必填字段需一并传
@@ -59,28 +58,38 @@ export const editRoleDataScope = (
     deptCheckStrictly,
   })
 
+// 后端 authUser 接口用 Query/Form 接 snake_case 参数
 export const getAllocatedUsers = (roleId: number, params: AuthUserQuery) =>
   request.get<never, PageResult<SysUserRow>>('/system/role/authUser/allocatedList', {
-    params: { roleId, ...params },
+    params: {
+      role_id: roleId,
+      user_name: params.userName,
+      page_num: params.pageNum,
+      page_size: params.pageSize,
+    },
   })
 
 export const getUnallocatedUsers = (roleId: number, params: AuthUserQuery) =>
   request.get<never, PageResult<SysUserRow>>('/system/role/authUser/unallocatedList', {
-    params: { roleId, ...params },
+    params: {
+      role_id: roleId,
+      user_name: params.userName,
+      page_num: params.pageNum,
+      page_size: params.pageSize,
+    },
   })
 
-// 后端这几个接口用 Form 接参
 export const selectAllAuthUsers = (roleId: number, userIds: number[]) => {
-  const form = new URLSearchParams({ roleId: String(roleId), userIds: userIds.join(',') })
+  const form = new URLSearchParams({ role_id: String(roleId), user_ids: userIds.join(',') })
   return request.put<never, null>('/system/role/authUser/selectAll', form)
 }
 
 export const cancelAuthUser = (userId: number, roleId: number) => {
-  const form = new URLSearchParams({ userId: String(userId), roleId: String(roleId) })
+  const form = new URLSearchParams({ user_id: String(userId), role_id: String(roleId) })
   return request.put<never, null>('/system/role/authUser/cancel', form)
 }
 
 export const cancelAllAuthUsers = (roleId: number, userIds: number[]) => {
-  const form = new URLSearchParams({ roleId: String(roleId), userIds: userIds.join(',') })
+  const form = new URLSearchParams({ role_id: String(roleId), user_ids: userIds.join(',') })
   return request.put<never, null>('/system/role/authUser/cancelAll', form)
 }
