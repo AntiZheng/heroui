@@ -11,8 +11,11 @@ import DictPage from '../pages/system/dict'
 import DictDataPage from '../pages/system/dict/data'
 import ConfigPage from '../pages/system/config'
 import JobPage from '../pages/system/job'
+import OperLogPage from '../pages/system/operlog'
+import LoginLogPage from '../pages/system/logininfor'
 
 const MapPage = lazy(() => import('../pages/map'))
+const EditorPage = lazy(() => import('../pages/editor'))
 import { useAuthStore } from '../stores/auth'
 
 function RequireAuth({ children }: { children: ReactElement }) {
@@ -41,7 +44,10 @@ export default function AppRouter() {
         <Route path="system/dict/data/:dictType" element={<DictDataPage />} />
         <Route path="system/config" element={<ConfigPage />} />
         <Route path="system/job" element={<JobPage />} />
+        <Route path="system/operlog" element={<OperLogPage />} />
+        <Route path="system/logininfor" element={<LoginLogPage />} />
         <Route path="map" element={<Suspense><MapPage /></Suspense>} />
+        <Route path="editor" element={<Suspense><EditorPage /></Suspense>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

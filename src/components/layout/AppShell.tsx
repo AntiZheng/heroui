@@ -1,14 +1,17 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { Tooltip, TooltipContent, TooltipTrigger, Typography, Breadcrumbs, Dropdown, DropdownTrigger, DropdownPopover, DropdownMenu, DropdownItem } from '@heroui/react'
+import { Tooltip, TooltipContent, TooltipTrigger, Typography, Breadcrumbs, Dropdown, DropdownTrigger, DropdownPopover, DropdownMenu, DropdownItem, ScrollShadow } from '@heroui/react'
 import {
   BookA,
   Building2,
   ChevronDown,
+  FileClock,
+  FileText,
   FlaskConical,
   Home,
   LayoutGrid,
+  LogIn,
   LogOut,
   Map as MapIcon,
   Monitor,
@@ -16,17 +19,19 @@ import {
   PanelLeft,
   Settings2,
   ShieldCheck,
+  ScrollText,
   SlidersHorizontal,
   Sun,
   Timer,
   Users,
+  Wrench,
 } from 'lucide-react'
 import { useAuthStore } from '../../stores/auth'
 import { useThemeStore } from '../../stores/theme'
 import { getConfigByKey, PLATFORM_NAME_KEY } from '../../api/config'
 import { logout } from '../../api/auth'
 
-const DEFAULT_PLATFORM_NAME = 'Admin 平台'
+const DEFAULT_PLATFORM_NAME = '管理系统平台'
 
 interface NavLeaf {
   path: string
@@ -51,6 +56,21 @@ const navTree: NavEntry[] = [
       { path: '/system/dict', label: '字典管理', icon: BookA },
       { path: '/system/config', label: '参数设置', icon: SlidersHorizontal },
       { path: '/system/job', label: '定时任务', icon: Timer },
+    ],
+  },
+  {
+    path: '/editor',
+    label: '系统工具',
+    icon: Wrench,
+    children: [{ path: '/editor', label: '文本编辑', icon: FileText }],
+  },
+  {
+    path: '/system/operlog',
+    label: '日志管理',
+    icon: ScrollText,
+    children: [
+      { path: '/system/operlog', label: '操作日志', icon: FileClock },
+      { path: '/system/logininfor', label: '登录日志', icon: LogIn },
     ],
   },
   {
@@ -192,14 +212,20 @@ export default function AppShell() {
             collapsed ? 'justify-center px-0' : 'px-4'
           }`}
         >
-          <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground">
-            <LayoutGrid size={14} aria-hidden />
+          <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+            <LayoutGrid size={12} aria-hidden />
           </span>
           {!collapsed && <Typography.Heading level={6} className="text-sm">{platformTitle}</Typography.Heading>}
         </div>
-        <nav className={`flex flex-1 flex-col gap-0.5 ${collapsed ? 'px-1.5' : 'px-3'}`}>
-          {navTree.map(renderEntry)}
-        </nav>
+        <ScrollShadow
+          hideScrollBar
+          size={24}
+          className={`min-h-0 flex-1 pb-2 ${collapsed ? 'px-1.5' : 'px-3'}`}
+        >
+          <nav className="flex flex-col gap-0.5">
+            {navTree.map(renderEntry)}
+          </nav>
+        </ScrollShadow>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="mx-6 flex h-12 items-center gap-3 rounded-xl border border-foreground/20 bg-background px-6">
