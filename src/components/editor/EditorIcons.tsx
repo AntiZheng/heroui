@@ -219,6 +219,73 @@ export function DownloadIcon(props: SvgProps) {
   )
 }
 
+export function TextColorIcon(props: SvgProps) {
+  return (
+    <StrokeSvg {...props}>
+      <path d="M3.5 10.5 6.5 3h3l3 7.5" />
+      <path d="M4.75 8h6.5" />
+    </StrokeSvg>
+  )
+}
+
+export function HighlightIcon(props: SvgProps) {
+  return (
+    <StrokeSvg {...props}>
+      <path d="m8.5 8.5 3.9-3.9a1.35 1.35 0 0 1 1.9 1.9L10.4 10.4z" />
+      <path d="M8.5 8.5 5.8 11.2V13h1.8l2.7-2.7" />
+      <path d="M2.5 14h11" />
+    </StrokeSvg>
+  )
+}
+
+export function AlignLeftIcon(props: SvgProps) {
+  return (
+    <StrokeSvg {...props}>
+      <path d="M2.5 4h11" />
+      <path d="M2.5 8h7" />
+      <path d="M2.5 12h11" />
+    </StrokeSvg>
+  )
+}
+
+export function AlignCenterIcon(props: SvgProps) {
+  return (
+    <StrokeSvg {...props}>
+      <path d="M2.5 4h11" />
+      <path d="M4.5 8h7" />
+      <path d="M2.5 12h11" />
+    </StrokeSvg>
+  )
+}
+
+export function AlignRightIcon(props: SvgProps) {
+  return (
+    <StrokeSvg {...props}>
+      <path d="M2.5 4h11" />
+      <path d="M6.5 8h7" />
+      <path d="M2.5 12h11" />
+    </StrokeSvg>
+  )
+}
+
+export function AlignJustifyIcon(props: SvgProps) {
+  return (
+    <StrokeSvg {...props}>
+      <path d="M2.5 4h11" />
+      <path d="M2.5 8h11" />
+      <path d="M2.5 12h11" />
+    </StrokeSvg>
+  )
+}
+
+export function ChevronDownIcon(props: SvgProps) {
+  return (
+    <StrokeSvg {...props}>
+      <path d="m4 6 4 4 4-4" />
+    </StrokeSvg>
+  )
+}
+
 export function SaveIcon(props: SvgProps) {
   return (
     <StrokeSvg {...props}>

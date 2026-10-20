@@ -14,6 +14,7 @@ import {
   LogIn,
   LogOut,
   Map as MapIcon,
+  Megaphone,
   Monitor,
   Moon,
   PanelLeft,
@@ -55,6 +56,7 @@ const navTree: NavEntry[] = [
       { path: '/system/role', label: '角色管理', icon: ShieldCheck },
       { path: '/system/dict', label: '字典管理', icon: BookA },
       { path: '/system/config', label: '参数设置', icon: SlidersHorizontal },
+      { path: '/system/notice', label: '通知公告', icon: Megaphone },
       { path: '/system/job', label: '定时任务', icon: Timer },
     ],
   },
@@ -83,14 +85,29 @@ const navTree: NavEntry[] = [
 
 function breadcrumbsFor(pathname: string) {
   const home = { label: '首页', path: '/' }
+  if (pathname === '/') return [home]
   const entry = navTree.find(
-    (n) => n.path !== '/' && (n.children?.some((c) => c.path === pathname) || n.path === pathname),
+    (n) =>
+      n.path !== '/' &&
+      (n.path === pathname ||
+        n.children?.some((c) => pathname === c.path || pathname.startsWith(`${c.path}/`))),
   )
   if (!entry) return [home]
   const crumbs: { label: string; path?: string }[] = [home]
   if (entry.children) crumbs.push({ label: entry.label })
-  const leaf = entry.children?.find((c) => c.path === pathname)
-  crumbs.push({ label: leaf?.label ?? entry.label, path: leaf?.path ?? entry.path })
+  const leaf = entry.children?.find(
+    (c) => pathname === c.path || pathname.startsWith(`${c.path}/`),
+  )
+  if (!leaf) {
+    crumbs.push({ label: entry.label, path: entry.path })
+    return crumbs
+  }
+  crumbs.push({ label: leaf.label, path: leaf.path })
+  if (pathname !== leaf.path) {
+    const rest = pathname.slice(leaf.path.length + 1)
+    if (rest === 'new') crumbs.push({ label: '新增公告' })
+    else if (rest.startsWith('edit/')) crumbs.push({ label: '编辑公告' })
+  }
   return crumbs
 }
 
@@ -102,6 +119,9 @@ export default function AppShell() {
   const theme = useThemeStore((s) => s.theme)
   const setTheme = useThemeStore((s) => s.setTheme)
   const crumbs = breadcrumbsFor(location.pathname)
+  const hideTopBar =
+    location.pathname === '/system/notice/new' ||
+    /^\/system\/notice\/edit\/[^/]+$/.test(location.pathname)
 
   // 平台名从参数设置读取（sys.platform.name），未配置或接口异常时回退默认
   const { data: platformName } = useQuery({
@@ -142,7 +162,8 @@ export default function AppShell() {
     }`
 
   const renderLeaf = (leaf: NavLeaf, { indent = false }: { indent?: boolean } = {}) => {
-    const active = location.pathname === leaf.path
+    const active =
+      location.pathname === leaf.path || location.pathname.startsWith(`${leaf.path}/`)
     const Icon = leaf.icon
     const button = (
       <button
@@ -228,7 +249,11 @@ export default function AppShell() {
         </ScrollShadow>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="mx-6 flex h-12 items-center gap-3 rounded-xl border border-foreground/20 bg-background px-6">
+        <header
+          className={`mx-6 h-12 items-center gap-3 rounded-xl border border-foreground/20 bg-background px-6 ${
+            hideTopBar ? 'hidden' : 'flex'
+          }`}
+        >
           <Tooltip>
             <TooltipTrigger>
               <button
@@ -306,7 +331,7 @@ export default function AppShell() {
             </DropdownPopover>
           </Dropdown>
         </header>
-        <main className="flex-1 overflow-auto p-6">
+        <main className={hideTopBar ? 'flex-1 overflow-auto px-6 pb-6' : 'flex-1 overflow-auto p-6'}>
           <Outlet />
         </main>
       </div>

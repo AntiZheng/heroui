@@ -10,6 +10,8 @@ import RolePage from '../pages/system/role'
 import DictPage from '../pages/system/dict'
 import DictDataPage from '../pages/system/dict/data'
 import ConfigPage from '../pages/system/config'
+import NoticePage from '../pages/system/notice'
+import NoticeEditorPage from '../pages/system/notice/NoticeEditorPage'
 import JobPage from '../pages/system/job'
 import OperLogPage from '../pages/system/operlog'
 import LoginLogPage from '../pages/system/logininfor'
@@ -43,6 +45,9 @@ export default function AppRouter() {
         <Route path="system/dict" element={<DictPage />} />
         <Route path="system/dict/data/:dictType" element={<DictDataPage />} />
         <Route path="system/config" element={<ConfigPage />} />
+        <Route path="system/notice" element={<NoticePage />} />
+        <Route path="system/notice/new" element={<NoticeEditorPage />} />
+        <Route path="system/notice/edit/:noticeId" element={<NoticeEditorPage />} />
         <Route path="system/job" element={<JobPage />} />
         <Route path="system/operlog" element={<OperLogPage />} />
         <Route path="system/logininfor" element={<LoginLogPage />} />

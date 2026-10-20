@@ -11,11 +11,19 @@ import { EditorContent, useEditor, type Editor, type JSONContent } from '@tiptap
 import { BubbleMenu } from '@tiptap/react/menus'
 import StarterKit from '@tiptap/starter-kit'
 import { Placeholder } from '@tiptap/extensions'
+import { Color, FontSize, TextStyle } from '@tiptap/extension-text-style'
+import Highlight from '@tiptap/extension-highlight'
+import TextAlign from '@tiptap/extension-text-align'
 import { Button, Input, Label, Popover, TextField, Tooltip, TooltipContent, TooltipTrigger } from '@heroui/react'
 import {
+  AlignCenterIcon,
+  AlignJustifyIcon,
+  AlignLeftIcon,
+  AlignRightIcon,
   BlockquoteIcon,
   BoldIcon,
   BulletListIcon,
+  ChevronDownIcon,
   ClearContentIcon,
   ClearFormattingIcon,
   CodeBlockIcon,
@@ -23,6 +31,7 @@ import {
   Heading1Icon,
   Heading2Icon,
   Heading3Icon,
+  HighlightIcon,
   InlineCodeIcon,
   ItalicIcon,
   LinkIcon,
@@ -32,6 +41,7 @@ import {
   RedoIcon,
   SaveIcon,
   StrikethroughIcon,
+  TextColorIcon,
   UnderlineIcon,
   UndoIcon,
   type EditorIcon,
@@ -81,13 +91,14 @@ export interface RichTextEditorHandle {
 }
 
 interface Props {
-  defaultValue?: JSONContent | null
+  defaultValue?: JSONContent | string | null
   onValueChange?: (value: RichTextEditorValue) => void
   onSaveDraft?: () => void
   placeholder?: string
   editable?: boolean
   className?: string
   footerLeft?: ReactNode
+  showToolbar?: boolean
   showFooter?: boolean
 }
 
@@ -137,8 +148,69 @@ const EXPORT_OPTIONS: { format: ExportFormat; label: string; ext: string }[] = [
   { format: 'json', label: 'JSON', ext: 'json' },
 ]
 
+const FONT_SIZES = ['12', '14', '16', '18', '20', '24', '30', '36'] as const
+
+const TEXT_COLORS = [
+  '#111827',
+  '#6b7280',
+  '#ef4444',
+  '#f97316',
+  '#eab308',
+  '#22c55e',
+  '#14b8a6',
+  '#3b82f6',
+  '#6366f1',
+  '#a855f7',
+  '#ec4899',
+  '#ffffff',
+]
+
+const HIGHLIGHT_COLORS = [
+  'rgba(250, 204, 21, 0.5)',
+  'rgba(74, 222, 128, 0.45)',
+  'rgba(96, 165, 250, 0.45)',
+  'rgba(244, 114, 182, 0.4)',
+  'rgba(167, 139, 250, 0.45)',
+  'rgba(251, 146, 60, 0.45)',
+  'rgba(148, 163, 184, 0.4)',
+]
+
+type TextAlignValue = 'left' | 'center' | 'right' | 'justify'
+
+const TEXT_ALIGN_OPTIONS: { value: TextAlignValue; label: string; icon: EditorIcon }[] = [
+  { value: 'left', label: '左对齐', icon: AlignLeftIcon },
+  { value: 'center', label: '居中', icon: AlignCenterIcon },
+  { value: 'right', label: '右对齐', icon: AlignRightIcon },
+  { value: 'justify', label: '两端对齐', icon: AlignJustifyIcon },
+]
+
+interface Snapshot {
+  bold: boolean
+  italic: boolean
+  underline: boolean
+  strike: boolean
+  code: boolean
+  h1: boolean
+  h2: boolean
+  h3: boolean
+  codeBlock: boolean
+  blockquote: boolean
+  bulletList: boolean
+  orderedList: boolean
+  link: boolean
+  fontSize: string | null
+  textColor: string | null
+  highlightColor: string | null
+  textAlign: TextAlignValue
+  canUndo: boolean
+  canRedo: boolean
+  isEmpty: boolean
+  characters: number
+  words: number
+}
+
 // 编辑器销毁的瞬态窗口内（如 StrictMode 重新挂载）schema 为 null，需回退空快照
-const EMPTY_SNAPSHOT = {
+const EMPTY_SNAPSHOT: Snapshot = {
   bold: false,
   italic: false,
   underline: false,
@@ -152,6 +224,10 @@ const EMPTY_SNAPSHOT = {
   bulletList: false,
   orderedList: false,
   link: false,
+  fontSize: null,
+  textColor: null,
+  highlightColor: null,
+  textAlign: 'left',
   canUndo: false,
   canRedo: false,
   isEmpty: true,
@@ -159,9 +235,13 @@ const EMPTY_SNAPSHOT = {
   words: 0,
 }
 
-function readSnapshot(instance: Editor) {
+function readSnapshot(instance: Editor): Snapshot {
   if (!instance.schema) return EMPTY_SNAPSHOT
   const text = instance.getText()
+  const textStyle = instance.getAttributes('textStyle') as {
+    color?: string | null
+    fontSize?: string | null
+  }
   return {
     bold: instance.isActive('bold'),
     italic: instance.isActive('italic'),
@@ -176,6 +256,15 @@ function readSnapshot(instance: Editor) {
     bulletList: instance.isActive('bulletList'),
     orderedList: instance.isActive('orderedList'),
     link: instance.isActive('link'),
+    fontSize: typeof textStyle.fontSize === 'string' ? textStyle.fontSize : null,
+    textColor: typeof textStyle.color === 'string' ? textStyle.color : null,
+    highlightColor: instance.isActive('highlight')
+      ? ((instance.getAttributes('highlight').color as string | undefined) ??
+        HIGHLIGHT_COLORS[0])
+      : null,
+    textAlign:
+      TEXT_ALIGN_OPTIONS.find((option) => instance.isActive({ textAlign: option.value }))
+        ?.value ?? 'left',
     canUndo: instance.can().undo(),
     canRedo: instance.can().redo(),
     isEmpty: instance.isEmpty,
@@ -193,6 +282,7 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function RichText
     editable = true,
     className = '',
     footerLeft,
+    showToolbar = true,
     showFooter = true,
   },
   ref,
@@ -203,6 +293,10 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function RichText
   const [linkHref, setLinkHref] = useState('')
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
+  const [sizeOpen, setSizeOpen] = useState(false)
+  const [textColorOpen, setTextColorOpen] = useState(false)
+  const [highlightOpen, setHighlightOpen] = useState(false)
+  const [alignOpen, setAlignOpen] = useState(false)
   const [fileName, setFileName] = useState(exportBaseName)
   const fileNameEditedRef = useRef(false)
 
@@ -219,6 +313,11 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function RichText
         },
       }),
       Placeholder.configure({ placeholder }),
+      TextStyle,
+      Color,
+      FontSize,
+      Highlight.configure({ multicolor: true }),
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
     ],
     content: defaultValue ?? '',
     editable,
@@ -293,6 +392,42 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function RichText
     setLinkOpen(false)
   }, [editor])
 
+  const applyFontSize = (size: string) => {
+    editor.chain().focus().setFontSize(`${size}px`).run()
+    setSizeOpen(false)
+  }
+
+  const clearFontSize = () => {
+    editor.chain().focus().unsetFontSize().run()
+    setSizeOpen(false)
+  }
+
+  const applyTextColor = (color: string) => {
+    editor.chain().focus().setColor(color).run()
+    setTextColorOpen(false)
+  }
+
+  const clearTextColor = () => {
+    editor.chain().focus().unsetColor().run()
+    setTextColorOpen(false)
+  }
+
+  const applyHighlight = (color: string) => {
+    if (snapshot.highlightColor === color) editor.chain().focus().unsetHighlight().run()
+    else editor.chain().focus().setHighlight({ color }).run()
+    setHighlightOpen(false)
+  }
+
+  const clearHighlight = () => {
+    editor.chain().focus().unsetHighlight().run()
+    setHighlightOpen(false)
+  }
+
+  const applyTextAlign = (value: TextAlignValue) => {
+    editor.chain().focus().setTextAlign(value).run()
+    setAlignOpen(false)
+  }
+
   const handleExport = useCallback(
     (format: ExportFormat) => {
       setExportOpen(false)
@@ -328,6 +463,9 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function RichText
     [editor],
   )
 
+  const ActiveAlignIcon =
+    TEXT_ALIGN_OPTIONS.find((option) => option.value === snapshot.textAlign)?.icon ?? AlignLeftIcon
+
   return (
     <div
       className={`flex min-h-0 flex-col overflow-hidden bg-surface ${
@@ -336,7 +474,8 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function RichText
           : 'rounded-2xl border border-separator shadow-sm'
       } ${className}`}
     >
-      <div className="flex min-h-12 flex-wrap items-center gap-1 border-b border-separator/70 px-2 py-2">
+      {showToolbar && (
+      <div className="flex min-h-12 flex-nowrap items-center gap-0.5 overflow-x-auto border-b border-separator/70 px-2 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>*]:shrink-0">
         <ToolButton
           label="撤销"
           icon={UndoIcon}
@@ -382,6 +521,182 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function RichText
           isActive={snapshot.code}
           onPress={() => editor.chain().focus().toggleCode().run()}
         />
+        <Divider />
+        <Popover isOpen={sizeOpen} onOpenChange={setSizeOpen}>
+          <Button
+            size="sm"
+            variant="tertiary"
+            aria-label="字号"
+            className="min-w-11 gap-0.5 rounded-full! px-1.5 text-xs font-normal"
+          >
+            {snapshot.fontSize ? snapshot.fontSize.replace('px', '') : '字号'}
+            <ChevronDownIcon className="size-3!" />
+          </Button>
+          <Popover.Content className="w-40 p-1.5">
+            <div role="menu" aria-label="字号" className="grid grid-cols-3 gap-0.5">
+              <Button
+                variant={snapshot.fontSize === null ? 'secondary' : 'ghost'}
+                size="sm"
+                className="justify-center px-1"
+                onPress={clearFontSize}
+              >
+                默认
+              </Button>
+              {FONT_SIZES.map((size) => (
+                <Button
+                  key={size}
+                  variant={snapshot.fontSize === `${size}px` ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className="justify-center px-1"
+                  onPress={() => applyFontSize(size)}
+                >
+                  {size}
+                </Button>
+              ))}
+            </div>
+          </Popover.Content>
+        </Popover>
+        <Popover isOpen={textColorOpen} onOpenChange={setTextColorOpen}>
+          <Button
+            size="sm"
+            isIconOnly
+            variant="tertiary"
+            aria-label="字体颜色"
+            className="relative rounded-full!"
+          >
+            <TextColorIcon className="size-3.5!" />
+            <span
+              aria-hidden
+              className="absolute bottom-1 left-1/2 h-0.5 w-3.5 -translate-x-1/2 rounded-full"
+              style={{ backgroundColor: snapshot.textColor ?? 'currentColor' }}
+            />
+          </Button>
+          <Popover.Content className="w-44 p-2">
+            <div role="menu" aria-label="字体颜色" className="grid grid-cols-6 gap-1.5">
+              {TEXT_COLORS.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={snapshot.textColor === color}
+                  aria-label={`字体颜色 ${color}`}
+                  onClick={() => applyTextColor(color)}
+                  className={`size-5 rounded-md border border-separator transition ${
+                    snapshot.textColor === color
+                      ? 'ring-2 ring-accent'
+                      : 'hover:scale-110'
+                  }`}
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+            </div>
+            <div className="mt-2 flex items-center gap-1.5 border-t border-separator/60 pt-2">
+              <label
+                title="自定义颜色"
+                className="relative flex size-6 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-md border border-separator"
+              >
+                <span
+                  className="size-full"
+                  style={{
+                    background:
+                      'conic-gradient(#ef4444, #eab308, #22c55e, #3b82f6, #a855f7, #ef4444)',
+                  }}
+                />
+                <input
+                  type="color"
+                  aria-label="自定义字体颜色"
+                  value={
+                    /^#[0-9a-f]{6}$/i.test(snapshot.textColor ?? '')
+                      ? snapshot.textColor!
+                      : '#111827'
+                  }
+                  onChange={(event) => applyTextColor(event.currentTarget.value)}
+                  className="absolute inset-0 cursor-pointer opacity-0"
+                />
+              </label>
+              <Button
+                variant={snapshot.textColor === null ? 'secondary' : 'ghost'}
+                size="sm"
+                className="flex-1 justify-center"
+                onPress={clearTextColor}
+              >
+                默认色
+              </Button>
+            </div>
+          </Popover.Content>
+        </Popover>
+        <Popover isOpen={highlightOpen} onOpenChange={setHighlightOpen}>
+          <Button
+            size="sm"
+            isIconOnly
+            variant="tertiary"
+            aria-label="高亮"
+            className="relative rounded-full!"
+          >
+            <HighlightIcon className="size-3.5!" />
+            <span
+              aria-hidden
+              className="absolute bottom-1 left-1/2 h-0.5 w-3.5 -translate-x-1/2 rounded-full"
+              style={{ backgroundColor: snapshot.highlightColor ?? 'var(--separator)' }}
+            />
+          </Button>
+          <Popover.Content className="w-44 p-2">
+            <div role="menu" aria-label="高亮颜色" className="grid grid-cols-4 gap-1.5">
+              {HIGHLIGHT_COLORS.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={snapshot.highlightColor === color}
+                  aria-label={`高亮颜色 ${color}`}
+                  onClick={() => applyHighlight(color)}
+                  className={`h-6 rounded-md border border-separator transition ${
+                    snapshot.highlightColor === color
+                      ? 'ring-2 ring-accent'
+                      : 'hover:scale-105'
+                  }`}
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+              <Button
+                variant={snapshot.highlightColor === null ? 'secondary' : 'ghost'}
+                size="sm"
+                className="col-span-4 justify-center"
+                onPress={clearHighlight}
+              >
+                无高亮
+              </Button>
+            </div>
+          </Popover.Content>
+        </Popover>
+        <Divider />
+        <Popover isOpen={alignOpen} onOpenChange={setAlignOpen}>
+          <Button
+            size="sm"
+            variant="tertiary"
+            aria-label="对齐方式"
+            className="min-w-11 gap-0.5 rounded-full! px-1.5"
+          >
+            <ActiveAlignIcon className="size-3.5!" />
+            <ChevronDownIcon className="size-3!" />
+          </Button>
+          <Popover.Content className="w-36 p-1.5">
+            <div role="menu" aria-label="对齐方式" className="flex flex-col gap-0.5">
+              {TEXT_ALIGN_OPTIONS.map((option) => (
+                <Button
+                  key={option.value}
+                  variant={snapshot.textAlign === option.value ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className="w-full justify-start gap-2 px-2"
+                  onPress={() => applyTextAlign(option.value)}
+                >
+                  <option.icon className="size-3.5!" />
+                  <span className="flex-1 text-left">{option.label}</span>
+                </Button>
+              ))}
+            </div>
+          </Popover.Content>
+        </Popover>
         <Divider />
         <ToolButton
           label="一级标题"
@@ -443,7 +758,7 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function RichText
           onPress={() => editor.chain().focus().clearContent(true).run()}
         />
         <Divider />
-        <div className="ml-auto flex items-center gap-1">
+        <div className="ml-auto flex items-center gap-0.5">
           {onSaveDraft && (
             <ToolButton label="保存草稿" icon={SaveIcon} round onPress={onSaveDraft} />
           )}
@@ -499,12 +814,14 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function RichText
           />
         </div>
       </div>
+      )}
 
       <EditorContent
         editor={editor}
         className="rich-text-editor__scroll min-h-0 flex-1 overflow-y-auto px-6 py-5"
       />
 
+      {editable && (
       <BubbleMenu
         editor={editor}
         appendTo={() => document.body}
@@ -542,6 +859,7 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function RichText
           onPress={openLinkDialog}
         />
       </BubbleMenu>
+      )}
 
       {showFooter && (
         <div className="flex items-center justify-between gap-4 border-t border-separator/70 px-5 py-2.5 text-xs text-muted">
