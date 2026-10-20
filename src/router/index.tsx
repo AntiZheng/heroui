@@ -1,28 +1,64 @@
+import { type ReactElement } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
-import { lazy, Suspense, type ReactElement } from 'react'
+import { Button, Spinner } from '@heroui/react'
+import { useQuery } from '@tanstack/react-query'
 import AppShell from '../components/layout/AppShell'
 import LoginPage from '../pages/login'
 import RegisterPage from '../pages/register'
 import HomePage from '../pages/home'
-import UserPage from '../pages/system/user'
-import DeptPage from '../pages/system/dept'
-import RolePage from '../pages/system/role'
-import DictPage from '../pages/system/dict'
-import DictDataPage from '../pages/system/dict/data'
-import ConfigPage from '../pages/system/config'
-import NoticePage from '../pages/system/notice'
-import NoticeEditorPage from '../pages/system/notice/NoticeEditorPage'
-import JobPage from '../pages/system/job'
-import OperLogPage from '../pages/system/operlog'
-import LoginLogPage from '../pages/system/logininfor'
-
-const MapPage = lazy(() => import('../pages/map'))
-const EditorPage = lazy(() => import('../pages/editor'))
+import { buildMenuRoutes } from '../components/layout/menuNav'
+import { getRouters } from '../api/auth'
 import { useAuthStore } from '../stores/auth'
 
 function RequireAuth({ children }: { children: ReactElement }) {
   const token = useAuthStore((s) => s.token)
   return token ? children : <Navigate to="/login" replace />
+}
+
+function MenuGate() {
+  const userId = useAuthStore((s) => s.user?.user_id)
+  const { data, isPending, isError, refetch } = useQuery({
+    queryKey: ['user-routers', userId],
+    queryFn: getRouters,
+  })
+
+  if (isPending) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <Spinner />
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center gap-3 bg-background">
+        <p className="text-sm text-muted">菜单加载失败，请检查网络或后端服务</p>
+        <Button variant="tertiary" size="sm" onPress={() => void refetch()}>
+          重试
+        </Button>
+      </div>
+    )
+  }
+
+  const menus = data ?? []
+  const routes = buildMenuRoutes(menus)
+
+  return (
+    <Routes>
+      <Route element={<AppShell menus={menus} />}>
+        <Route index element={<HomePage />} />
+        {routes.map((route) => (
+          <Route
+            key={route.path}
+            path={route.path.replace(/^\//, '')}
+            element={route.element}
+          />
+        ))}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Route>
+    </Routes>
+  )
 }
 
 export default function AppRouter() {
@@ -31,30 +67,13 @@ export default function AppRouter() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route
-        path="/"
+        path="/*"
         element={
           <RequireAuth>
-            <AppShell />
+            <MenuGate />
           </RequireAuth>
         }
-      >
-        <Route index element={<HomePage />} />
-        <Route path="system/user" element={<UserPage />} />
-        <Route path="system/dept" element={<DeptPage />} />
-        <Route path="system/role" element={<RolePage />} />
-        <Route path="system/dict" element={<DictPage />} />
-        <Route path="system/dict/data/:dictType" element={<DictDataPage />} />
-        <Route path="system/config" element={<ConfigPage />} />
-        <Route path="system/notice" element={<NoticePage />} />
-        <Route path="system/notice/new" element={<NoticeEditorPage />} />
-        <Route path="system/notice/edit/:noticeId" element={<NoticeEditorPage />} />
-        <Route path="system/job" element={<JobPage />} />
-        <Route path="system/operlog" element={<OperLogPage />} />
-        <Route path="system/logininfor" element={<LoginLogPage />} />
-        <Route path="map" element={<Suspense><MapPage /></Suspense>} />
-        <Route path="editor" element={<Suspense><EditorPage /></Suspense>} />
-      </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
+      />
     </Routes>
   )
 }

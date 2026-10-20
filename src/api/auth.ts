@@ -1,5 +1,8 @@
 import request from './request'
 import type { CurrentUserInfo, CaptchaResult, TokenResponse } from '../types/user'
+import type { SysMenuRow } from '../types/menu'
+
+export const getRouters = () => request.get<never, SysMenuRow[]>('/getRouters')
 
 export const getCaptcha = () => request.get<never, CaptchaResult>('/captchaImage')
 
