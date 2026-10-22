@@ -7,6 +7,50 @@
 /* 全局画布调深一档（对齐 heroui.com 的浅灰色调，zinc-100），仅覆盖浅色主题 */
 :root:not(.dark) {
   --background: oklch(0.967 0.001 286.375);
+
+  /* 侧栏/顶栏磨砂玻璃：玻璃本体保持中性，冷暖氛围只来自背后的环境光层 */
+  --chrome-glass-bg: color-mix(in oklab, var(--surface) 58%, transparent);
+  --chrome-glass-shadow: 0 12px 40px -18px rgba(24, 24, 27, 0.35);
+  --chrome-highlight: rgba(255, 255, 255, 0.72);
+  --chrome-ambient-primary: color-mix(in oklab, var(--accent) 10%, transparent);
+  --chrome-ambient-secondary: color-mix(in oklab, var(--accent) 6%, transparent);
+  --chrome-ambient-warm: transparent;
+}
+
+.dark {
+  --chrome-glass-bg: color-mix(in oklab, var(--surface) 44%, transparent);
+  --chrome-glass-shadow: 0 16px 48px -20px rgba(0, 0, 0, 0.65);
+  --chrome-highlight: rgba(255, 255, 255, 0.12);
+  --chrome-ambient-primary: color-mix(in oklab, var(--accent) 16%, transparent);
+  --chrome-ambient-secondary: color-mix(in oklab, var(--accent) 8%, transparent);
+  /* 暗色借一缕暖光还原参考图的氛围，浅色保持纯冷雾避免画布发黄 */
+  --chrome-ambient-warm: color-mix(in oklab, oklch(0.82 0.09 72) 7%, transparent);
+}
+
+.chrome-glass {
+  background-color: var(--chrome-glass-bg);
+  box-shadow:
+    inset 0 1px 0 var(--chrome-highlight),
+    var(--chrome-glass-shadow);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+}
+.dark .chrome-glass {
+  backdrop-filter: blur(24px) saturate(1.6);
+  -webkit-backdrop-filter: blur(24px) saturate(1.6);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .chrome-glass {
+    background-color: var(--surface);
+  }
+}
+
+/* 环境光只铺在 chrome 后方，向外淡出，表格画布主体仍保持中性灰 */
+.chrome-ambient {
+  background:
+    radial-gradient(56rem 30rem at 0% 0%, var(--chrome-ambient-primary), transparent 70%),
+    radial-gradient(44rem 26rem at 88% -8%, var(--chrome-ambient-secondary), transparent 72%),
+    radial-gradient(40rem 28rem at 6% 100%, var(--chrome-ambient-warm), transparent 76%);
 }
 
 /* HeroUI Tooltip 默认 --tooltip-delay 为 1500ms，悬停需等 1.5s 才弹出；调到 300ms 即时反馈 */
@@ -110,6 +154,122 @@
   }
 }
 
+/* 按钮玻璃釉面：不改变各变体底色，只叠加顶部高光、内边缘光与外投影 */
+.button {
+  box-shadow:
+    0 1px 1px rgb(15 23 42 / 0.05),
+    0 6px 14px -8px rgb(15 23 42 / 0.35);
+}
+.button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgb(255 255 255 / 0.36) 0%,
+    rgb(255 255 255 / 0.08) 44%,
+    rgb(255 255 255 / 0) 62%,
+    rgb(0 0 0 / 0.05) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.5),
+    inset 0 -1px 0 rgb(0 0 0 / 0.05);
+  opacity: 0.9;
+  transition: opacity 100ms ease-out;
+}
+@media (hover: hover) {
+  .button:hover::before,
+  .button[data-hovered='true']::before {
+    opacity: 1;
+  }
+}
+.button:active,
+.button[data-pressed='true'] {
+  box-shadow:
+    inset 0 1px 2px rgb(0 0 0 / 0.12),
+    0 1px 1px rgb(15 23 42 / 0.04);
+}
+.button:disabled,
+.button[aria-disabled='true'] {
+  box-shadow: none;
+}
+.button:disabled::before,
+.button[aria-disabled='true']::before {
+  opacity: 0.35;
+}
+.button--ghost,
+.button--outline {
+  box-shadow: none;
+}
+.button--ghost::before,
+.button--outline::before {
+  display: none;
+}
+.dark .button {
+  box-shadow:
+    0 1px 1px rgb(0 0 0 / 0.3),
+    0 8px 20px -10px rgb(0 0 0 / 0.7);
+}
+.dark .button::before {
+  background: linear-gradient(
+    180deg,
+    rgb(255 255 255 / 0.2) 0%,
+    rgb(255 255 255 / 0.06) 44%,
+    rgb(255 255 255 / 0) 62%,
+    rgb(0 0 0 / 0.2) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.22),
+    inset 0 -1px 0 rgb(0 0 0 / 0.35);
+}
+.dark .button:active,
+.dark .button[data-pressed='true'] {
+  box-shadow:
+    inset 0 1px 2px rgb(0 0 0 / 0.5),
+    0 1px 1px rgb(0 0 0 / 0.3);
+}
+.dark .button:disabled,
+.dark .button[aria-disabled='true'],
+.dark .button--ghost,
+.dark .button--outline {
+  box-shadow: none;
+}
+
+/* 侧栏选中项：软蓝底 + 与按钮同源的玻璃釉面 */
+.nav-item-active {
+  background-color: var(--accent-soft);
+  color: var(--accent-soft-foreground);
+  background-image: linear-gradient(
+    180deg,
+    rgb(255 255 255 / 0.5) 0%,
+    rgb(255 255 255 / 0.12) 45%,
+    rgb(255 255 255 / 0) 62%,
+    rgb(0 0 0 / 0.03) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.65),
+    inset 0 -1px 0 rgb(0 0 0 / 0.04),
+    0 1px 2px rgb(15 23 42 / 0.06),
+    0 6px 14px -8px rgb(15 23 42 / 0.28);
+}
+.dark .nav-item-active {
+  background-image: linear-gradient(
+    180deg,
+    rgb(255 255 255 / 0.16) 0%,
+    rgb(255 255 255 / 0.04) 45%,
+    rgb(255 255 255 / 0) 62%,
+    rgb(0 0 0 / 0.16) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.16),
+    inset 0 -1px 0 rgb(0 0 0 / 0.3),
+    0 1px 2px rgb(0 0 0 / 0.3),
+    0 8px 18px -10px rgb(0 0 0 / 0.6);
+}
+
 /* 面包屑字号 13px：HeroUI .breadcrumbs__link 基类默认 text-sm（14px），
    根元素上的字号类作用不到链接元素，需直接覆盖基类 */
 .breadcrumbs__link {
@@ -133,6 +293,31 @@
    故降外壳高度到 32px；左右 padding 与内部输入样式不动 */
 .search-field__group {
   height: 2rem;
+}
+
+/* 输入框内凹玻璃：与按钮的凸起釉面互为镜像——顶部内阴影向下陷、底缘一道高光。
+   挂到 Tailwind 的 --tw-inset-shadow，与 focus ring 共用同一条 box-shadow 组合，
+   避免覆盖掉 status-focused-field 的焦点环 */
+.input,
+.textarea,
+.search-field__group,
+.select__trigger:not(.page-size-stepper-trigger),
+.date-input-group {
+  --tw-inset-shadow:
+    inset 0 1px 2px rgb(15 23 42 / 0.08),
+    inset 0 3px 6px -3px rgb(15 23 42 / 0.1),
+    inset 0 -1px 0 rgb(255 255 255 / 0.9);
+}
+
+.dark .input,
+.dark .textarea,
+.dark .search-field__group,
+.dark .select__trigger:not(.page-size-stepper-trigger),
+.dark .date-input-group {
+  --tw-inset-shadow:
+    inset 0 1px 2px rgb(0 0 0 / 0.45),
+    inset 0 3px 8px -4px rgb(0 0 0 / 0.5),
+    inset 0 -1px 0 rgb(255 255 255 / 0.07);
 }
 
 /* 表格行高压缩一档：单元格与表头的上下内边距 10px→8px（HeroUI 默认 py-2.5） */

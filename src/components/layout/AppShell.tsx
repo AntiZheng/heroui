@@ -20,7 +20,7 @@ import { useThemeStore } from '../../stores/theme'
 import { getConfigByKey, PLATFORM_NAME_KEY } from '../../api/config'
 import { logout } from '../../api/auth'
 import type { SysMenuRow } from '../../types/menu'
-import { breadcrumbsFor, buildMenuNav, firstNavPath, type MenuNavNode } from './menuNav'
+import { breadcrumbsFor, buildMenuNav, firstNavPath, isNavActive, type MenuNavNode } from './menuNav'
 
 const DEFAULT_PLATFORM_NAME = '管理系统平台'
 
@@ -71,17 +71,13 @@ export default function AppShell({ menus }: { menus: SysMenuRow[] }) {
   const itemClass = (active: boolean) =>
     `flex h-9 w-full cursor-pointer items-center gap-3 rounded-full text-left text-xs transition-colors ${
       active
-        ? 'bg-surface-secondary font-medium text-foreground'
-        : 'text-foreground/70 hover:bg-surface-secondary/60 hover:text-foreground'
+        ? 'nav-item-active font-medium'
+        : 'text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground dark:hover:bg-white/[0.06]'
     }`
 
   const renderLeaf = (leaf: MenuNavNode, { indent = false }: { indent?: boolean } = {}) => {
     const path = leaf.path ?? '/'
-    const active =
-      !leaf.external &&
-      (path === '/'
-        ? location.pathname === '/'
-        : location.pathname === path || location.pathname.startsWith(`${path}/`))
+    const active = !leaf.external && isNavActive(leaf, location.pathname)
     const Icon = leaf.icon
     const className = `${itemClass(active)} ${collapsed ? 'justify-center px-0' : indent ? 'pl-9 pr-3' : 'px-3'}`
     const button = leaf.external ? (
@@ -151,9 +147,10 @@ export default function AppShell({ menus }: { menus: SysMenuRow[] }) {
   }
 
   return (
-    <div className="flex h-screen gap-3 bg-background p-3">
+    <div className="relative isolate flex h-screen gap-3 bg-background p-3">
+      <div aria-hidden className="chrome-ambient pointer-events-none absolute inset-0 -z-10" />
       <aside
-        className={`flex shrink-0 flex-col rounded-2xl border border-separator bg-surface shadow-sm transition-[width] duration-200 ${
+        className={`chrome-glass flex shrink-0 flex-col rounded-2xl border border-separator transition-[width] duration-200 ${
           collapsed ? 'w-12' : 'w-56'
         }`}
       >
@@ -179,7 +176,7 @@ export default function AppShell({ menus }: { menus: SysMenuRow[] }) {
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <header
-          className={`mx-6 h-12 items-center gap-3 rounded-xl border border-foreground/20 bg-background px-6 ${
+          className={`chrome-glass mx-6 h-12 items-center gap-3 rounded-xl border border-foreground/20 pl-2 pr-6 ${
             hideTopBar ? 'hidden' : 'flex'
           }`}
         >
@@ -188,14 +185,14 @@ export default function AppShell({ menus }: { menus: SysMenuRow[] }) {
               <button
                 onClick={toggleCollapsed}
                 aria-label={collapsed ? '展开侧边栏' : '收起侧边栏'}
-                className="flex size-7 cursor-pointer items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-secondary hover:text-foreground"
+                className="flex size-7 cursor-pointer items-center justify-center rounded-lg text-muted transition-colors hover:bg-foreground/[0.05] hover:text-foreground dark:hover:bg-white/[0.08]"
               >
                 <PanelLeft size={14} aria-hidden />
               </button>
             </TooltipTrigger>
             <TooltipContent>{collapsed ? '展开侧边栏' : '收起侧边栏'}</TooltipContent>
           </Tooltip>
-          <Breadcrumbs className="mr-auto rounded-full bg-surface-secondary px-3 py-1">
+          <Breadcrumbs className="mr-auto">
             {crumbs.map((crumb, i) => (
               <Breadcrumbs.Item
                 key={`${crumb.label}-${i}`}
@@ -212,7 +209,7 @@ export default function AppShell({ menus }: { menus: SysMenuRow[] }) {
           <div
             role="radiogroup"
             aria-label="主题模式"
-            className="flex items-center gap-0.5 rounded-full border border-separator bg-surface-secondary p-0.5"
+            className="flex items-center gap-0.5 rounded-full border border-separator bg-foreground/[0.04] p-0.5 dark:border-white/10 dark:bg-white/[0.06]"
           >
             {(
               [
@@ -229,7 +226,7 @@ export default function AppShell({ menus }: { menus: SysMenuRow[] }) {
                 onClick={() => setTheme(value)}
                 className={`flex size-6 cursor-pointer items-center justify-center rounded-full transition-colors ${
                   theme === value
-                    ? 'bg-surface text-foreground shadow-sm'
+                    ? 'bg-white/70 text-foreground shadow-sm dark:bg-white/10'
                     : 'text-muted hover:text-foreground'
                 }`}
               >

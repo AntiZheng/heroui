@@ -243,11 +243,11 @@ export default function JobPage() {
             size="sm"
             isSelected={active}
             onChange={(checked) => handleStatusToggle(row, checked)}
-            className="group w-fit text-[11px] [--switch-control-bg:var(--danger-soft)] [--switch-control-bg-hover:var(--danger-soft-hover)] [--switch-control-bg-checked:var(--success-soft)] [--switch-control-bg-checked-hover:var(--success-soft-hover)]"
+            className="group w-fit [--switch-control-bg:var(--danger-soft)] [--switch-control-bg-hover:var(--danger-soft-hover)] [--switch-control-bg-checked:var(--success-soft)] [--switch-control-bg-checked-hover:var(--success-soft-hover)]"
           >
-            <SwitchContent className="w-fit">
-              <SwitchControl className="h-6! w-16! rounded-full!">
-                <SwitchThumb className="size-5! rounded-full! group-data-[selected=true]:ms-[calc(100%-1.375rem)]" />
+            <SwitchContent className="w-fit text-[12px]!">
+              <SwitchControl className="h-5! w-14! rounded-full!">
+                <SwitchThumb className="size-4! rounded-full! group-data-[selected=true]:ms-[calc(100%-1.25rem)]" />
                 <span
                   aria-hidden
                   className={`pointer-events-none absolute inset-y-0 flex items-center font-medium ${

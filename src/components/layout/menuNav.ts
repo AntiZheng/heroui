@@ -11,6 +11,7 @@ export interface MenuNavNode {
   icon: LucideIcon
   path?: string
   external?: string
+  matchPaths?: string[]
   children?: MenuNavNode[]
 }
 
@@ -58,15 +59,30 @@ export function buildMenuNav(nodes: SysMenuRow[], parentPath = ''): MenuNavNode[
       continue
     }
     if (node.menu_type !== 'C' || (!pageDefOf(node) && node.is_frame !== 0)) continue
+    const def = pageDefOf(node)
+    const leafPath =
+      node.is_frame === 0 ? undefined : node.component === 'index' ? '/' : fullPath
     result.push({
       key: String(node.menu_id),
       label: node.menu_name,
       icon: resolveMenuIcon(node.icon),
-      path: node.is_frame === 0 ? undefined : node.component === 'index' ? '/' : fullPath,
+      path: leafPath,
       external: node.is_frame === 0 ? (node.path ?? undefined) : undefined,
+      matchPaths: leafPath
+        ? [
+            leafPath,
+            ...(def?.extras ?? []).map((extra) => resolveMenuPath(leafPath, extra.path)),
+          ]
+        : undefined,
     })
   }
   return result
+}
+
+export function isNavActive(node: MenuNavNode, pathname: string): boolean {
+  return (node.matchPaths ?? []).some(
+    (path) => matchPath({ path, end: true }, pathname) !== null,
+  )
 }
 
 export function firstNavPath(node: MenuNavNode): string | undefined {

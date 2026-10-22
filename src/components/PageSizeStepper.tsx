@@ -26,7 +26,7 @@ export default function PageSizeStepper({
         if (k) onChange(Number(k))
       }}
     >
-      <SelectTrigger className="h-7! min-h-0! items-center! gap-1.5! rounded-md! bg-transparent! px-1! py-0! shadow-none! hover:bg-default!">
+      <SelectTrigger className="page-size-stepper-trigger h-7! min-h-0! items-center! gap-1.5! rounded-md! bg-transparent! px-1! py-0! shadow-none! hover:bg-default!">
         <span className="text-xs text-muted">每页条数</span>
         <SelectValue className="text-xs! text-foreground!" />
         <span aria-hidden className="flex flex-col leading-none text-muted">
