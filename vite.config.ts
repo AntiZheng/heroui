@@ -12,6 +12,7 @@ export default defineConfig({
     proxy: {
       '/api': { target: 'http://localhost:9099', changeOrigin: true },
       '/uploads': { target: 'http://localhost:9099', changeOrigin: true },
+      '/_AMapService': { target: 'http://localhost:9099', changeOrigin: true },
     },
   },
 })

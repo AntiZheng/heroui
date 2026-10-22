@@ -15,6 +15,7 @@ import LoginLogPage from '../pages/system/logininfor'
 
 const MenuPage = lazy(() => import('../pages/system/menu'))
 const MapPage = lazy(() => import('../pages/map'))
+const AMapPage = lazy(() => import('../pages/map/amap'))
 const EditorPage = lazy(() => import('../pages/editor'))
 
 export interface MenuExtraRoute {
@@ -52,4 +53,5 @@ export const menuPageRegistry: Record<string, MenuPageDef> = {
   'monitor/logininfor': { element: <LoginLogPage /> },
   editor: { element: <Suspense><EditorPage /></Suspense> },
   map: { element: <Suspense><MapPage /></Suspense> },
+  'map/amap': { element: <Suspense><AMapPage /></Suspense> },
 }

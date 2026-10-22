@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@amap/amap-jsapi-loader": "^1.0.1",
     "@heroui/react": "^3.2.6",
     "@internationalized/date": "^3.12.4",
     "@react-aria/ssr": "^3.10.1",
@@ -32,6 +33,7 @@
     "zustand": "^5.0.0"
   },
   "devDependencies": {
+    "@amap/amap-jsapi-types": "^0.0.15",
     "@tailwindcss/vite": "^4.1.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
