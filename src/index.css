@@ -238,6 +238,17 @@
   box-shadow: none;
 }
 
+/* 编辑器工具栏按钮保持扁平：不套用全局玻璃釉面、外投影与按压内陷 */
+.editor-toolbar .button,
+.dark .editor-toolbar .button,
+.dark .editor-toolbar .button:active,
+.dark .editor-toolbar .button[data-pressed='true'] {
+  box-shadow: none;
+}
+.editor-toolbar .button::before {
+  display: none;
+}
+
 /* 侧栏选中项：软蓝底 + 与按钮同源的玻璃釉面 */
 .nav-item-active {
   background-color: var(--accent-soft);

@@ -475,7 +475,7 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function RichText
       } ${className}`}
     >
       {showToolbar && (
-      <div className="flex min-h-12 flex-nowrap items-center gap-0.5 overflow-x-auto border-b border-separator/70 px-2 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>*]:shrink-0">
+      <div className="editor-toolbar flex min-h-12 flex-nowrap items-center gap-0.5 overflow-x-auto border-b border-separator/70 px-2 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>*]:shrink-0">
         <ToolButton
           label="撤销"
           icon={UndoIcon}
@@ -527,7 +527,7 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function RichText
             size="sm"
             variant="tertiary"
             aria-label="字号"
-            className="min-w-11 gap-0.5 rounded-full! px-1.5 text-xs font-normal"
+            className="min-w-11 gap-0.5 rounded-full! px-1.5 text-[11px]! font-normal"
           >
             {snapshot.fontSize ? snapshot.fontSize.replace('px', '') : '字号'}
             <ChevronDownIcon className="size-3!" />
