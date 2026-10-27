@@ -14,8 +14,9 @@ import {
   TooltipTrigger,
   Typography,
 } from '@heroui/react'
-import { ChevronDown, Home, LayoutGrid, LogOut, Monitor, Moon, PanelLeft, Sun } from 'lucide-react'
+import { ChevronDown, Home, LayoutGrid, LogOut, Monitor, Moon, PanelLeft, Sun, UserRound } from 'lucide-react'
 import { useAuthStore } from '../../stores/auth'
+import ProfileModal from '../ProfileModal'
 import { useThemeStore } from '../../stores/theme'
 import { getConfigByKey, PLATFORM_NAME_KEY } from '../../api/config'
 import { logout } from '../../api/auth'
@@ -51,6 +52,7 @@ export default function AppShell({ menus }: { menus: SysMenuRow[] }) {
   const [collapsed, setCollapsed] = useState(
     () => localStorage.getItem('sidebar-collapsed') === '1',
   )
+  const [profileOpen, setProfileOpen] = useState(false)
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
   const toggleCollapsed = () =>
     setCollapsed((v) => {
@@ -75,11 +77,11 @@ export default function AppShell({ menus }: { menus: SysMenuRow[] }) {
         : 'text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground dark:hover:bg-white/[0.06]'
     }`
 
-  const renderLeaf = (leaf: MenuNavNode, { indent = false }: { indent?: boolean } = {}) => {
+  const renderLeaf = (leaf: MenuNavNode, { indent = false, deep = false }: { indent?: boolean; deep?: boolean } = {}) => {
     const path = leaf.path ?? '/'
     const active = !leaf.external && isNavActive(leaf, location.pathname)
     const Icon = leaf.icon
-    const className = `${itemClass(active)} ${collapsed ? 'justify-center px-0' : indent ? 'pl-9 pr-3' : 'px-3'}`
+    const className = `${itemClass(active)} ${collapsed ? 'justify-center px-0' : deep ? 'pl-12 pr-3' : indent ? 'pl-9 pr-3' : 'px-3'}`
     const button = leaf.external ? (
       <a href={leaf.external} target="_blank" rel="noreferrer" className={className}>
         <Icon size={16} aria-hidden className="shrink-0" />
@@ -100,8 +102,8 @@ export default function AppShell({ menus }: { menus: SysMenuRow[] }) {
     )
   }
 
-  const renderEntry = (entry: MenuNavNode) => {
-    if (!entry.children) return renderLeaf(entry)
+  const renderEntry = (entry: MenuNavNode, { indent = false }: { indent?: boolean } = {}) => {
+    if (!entry.children) return renderLeaf(entry, { indent, deep: indent })
     // 选中态只落在子项上，父目录不参与高亮
     const open = openGroups[entry.key] ?? true
     const Icon = entry.icon
@@ -126,7 +128,7 @@ export default function AppShell({ menus }: { menus: SysMenuRow[] }) {
       <div key={entry.key}>
         <button
           onClick={() => setOpenGroups((m) => ({ ...m, [entry.key]: !open }))}
-          className={`${itemClass(false)} px-3`}
+          className={`${itemClass(false)} ${indent ? 'pl-6 pr-3' : 'px-3'}`}
           aria-expanded={open}
         >
           <Icon size={16} aria-hidden className="shrink-0" />
@@ -139,7 +141,9 @@ export default function AppShell({ menus }: { menus: SysMenuRow[] }) {
         </button>
         {open && (
           <div className="mt-0.5 flex flex-col gap-0.5">
-            {entry.children.map((c) => renderLeaf(c, { indent: true }))}
+            {entry.children.map((c) =>
+              c.children ? renderEntry(c, { indent: true }) : renderLeaf(c, { indent: true, deep: indent }),
+            )}
           </div>
         )}
       </div>
@@ -170,7 +174,7 @@ export default function AppShell({ menus }: { menus: SysMenuRow[] }) {
           className={`min-h-0 flex-1 pb-2 ${collapsed ? 'px-1.5' : 'px-3'}`}
         >
           <nav className="flex flex-col gap-0.5">
-            {navTree.map(renderEntry)}
+            {navTree.map((entry) => renderEntry(entry))}
           </nav>
         </ScrollShadow>
       </aside>
@@ -236,7 +240,15 @@ export default function AppShell({ menus }: { menus: SysMenuRow[] }) {
           </div>
           <Dropdown>
             <DropdownTrigger className="flex size-7 cursor-pointer items-center justify-center rounded-full bg-accent text-xs font-medium text-accent-foreground outline-none focus-visible:ring-2 focus-visible:ring-accent/50">
-              {user?.nick_name?.slice(0, 1) ?? 'A'}
+              {user?.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt={user.nick_name}
+                  className="size-7 rounded-full object-cover"
+                />
+              ) : (
+                (user?.nick_name?.slice(0, 1) ?? 'A')
+              )}
             </DropdownTrigger>
             <DropdownPopover placement="bottom end">
               <div className="border-b border-separator px-3 py-2">
@@ -246,9 +258,14 @@ export default function AppShell({ menus }: { menus: SysMenuRow[] }) {
               </div>
               <DropdownMenu
                 onAction={(key) => {
+                  if (key === 'profile') setProfileOpen(true)
                   if (key === 'logout') handleLogout()
                 }}
               >
+                <DropdownItem id="profile" className="flex items-center gap-2">
+                  <UserRound size={14} aria-hidden />
+                  个人资料
+                </DropdownItem>
                 <DropdownItem id="logout" className="flex items-center gap-2 text-danger">
                   <LogOut size={14} aria-hidden />
                   退出登录
@@ -261,6 +278,7 @@ export default function AppShell({ menus }: { menus: SysMenuRow[] }) {
           <Outlet />
         </main>
       </div>
+      <ProfileModal isOpen={profileOpen} onClose={() => setProfileOpen(false)} />
     </div>
   )
 }

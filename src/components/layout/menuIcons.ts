@@ -5,8 +5,11 @@ import {
   Circle,
   FileClock,
   FileText,
+  Files,
   Folder,
+  HardDrive,
   Home,
+  KeyRound,
   ListTree,
   LogIn,
   Map as MapIcon,
@@ -40,6 +43,9 @@ export const MENU_ICON_OPTIONS: { key: string; label: string; icon: LucideIcon }
   { key: 'file-text', label: '文本', icon: FileText },
   { key: 'map', label: '地图', icon: MapIcon },
   { key: 'folder', label: '目录', icon: Folder },
+  { key: 'file', label: '文件', icon: Files },
+  { key: 'storage', label: '存储', icon: HardDrive },
+  { key: 'key', label: '密钥', icon: KeyRound },
   { key: 'default', label: '默认', icon: Circle },
 ]
 

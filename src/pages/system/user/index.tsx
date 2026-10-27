@@ -70,6 +70,7 @@ const columns = [
   { key: 'user_id', label: 'ID' },
   { key: 'user_name', label: '账号' },
   { key: 'nick_name', label: '昵称' },
+  { key: 'avatar', label: '头像' },
   { key: 'phonenumber', label: '手机号' },
   { key: 'status', label: '状态' },
   { key: 'status_switch', label: '启用' },
@@ -89,7 +90,12 @@ export default function UserPage() {
   const [batchOpen, setBatchOpen] = useState(false)
 
   const tableAreaRef = useRef<HTMLDivElement>(null)
-  const colCtrl = useColPrefs({ storageKey: 'user-table-cols', columns, fixedKeys: ['actions'] })
+  const colCtrl = useColPrefs({
+    storageKey: 'user-table-cols',
+    columns,
+    fixedKeys: ['actions'],
+    defaultHiddenKeys: ['avatar'],
+  })
   const visibleColumns = colCtrl.visibleColumns
   const { stickyColProps } = useStickyColumns({
     containerRef: tableAreaRef,
@@ -169,6 +175,14 @@ export default function UserPage() {
 
   const renderCell = (row: SysUserRow, key: string) => {
     switch (key) {
+      case 'avatar':
+        return row.avatar ? (
+          <img src={row.avatar} alt={row.nick_name} className="size-8 rounded-full object-cover" />
+        ) : (
+          <span className="flex size-8 items-center justify-center rounded-full bg-surface-secondary text-xs text-muted">
+            {(row.nick_name?.slice(0, 1) ?? '—').toUpperCase()}
+          </span>
+        )
       case 'status':
         return (
           <Chip color={row.status === '0' ? 'success' : 'danger'} size="sm" variant="soft">

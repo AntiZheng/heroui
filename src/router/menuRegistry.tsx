@@ -14,6 +14,9 @@ import OperLogPage from '../pages/system/operlog'
 import LoginLogPage from '../pages/system/logininfor'
 
 const MenuPage = lazy(() => import('../pages/system/menu'))
+const FilePage = lazy(() => import('../pages/file'))
+const StoragePage = lazy(() => import('../pages/file/storage'))
+const ApiKeyPage = lazy(() => import('../pages/file/api-key'))
 const MapPage = lazy(() => import('../pages/map'))
 const AMapPage = lazy(() => import('../pages/map/amap'))
 const EditorPage = lazy(() => import('../pages/editor'))
@@ -49,6 +52,9 @@ export const menuPageRegistry: Record<string, MenuPageDef> = {
     ],
   },
   'system/job': { element: <JobPage /> },
+  'file/index': { element: <Suspense><FilePage /></Suspense> },
+  'file/storage': { element: <Suspense><StoragePage /></Suspense> },
+  'file/api-key': { element: <Suspense><ApiKeyPage /></Suspense> },
   'monitor/operlog': { element: <OperLogPage /> },
   'monitor/logininfor': { element: <LoginLogPage /> },
   editor: { element: <Suspense><EditorPage /></Suspense> },

@@ -19,11 +19,18 @@ interface UseColPrefsOptions {
   columns: ColDef[]
   /** 不进入列设置、始终显示的列（如操作列） */
   fixedKeys?: string[]
+  /** 首次加载（无本地存储）时默认隐藏的列；后续迁移新增列时也不自动展示 */
+  defaultHiddenKeys?: string[]
 }
 
-export function useColPrefs({ storageKey, columns, fixedKeys = [] }: UseColPrefsOptions) {
+export function useColPrefs({ storageKey, columns, fixedKeys = [], defaultHiddenKeys }: UseColPrefsOptions) {
   const fixedKeyStr = fixedKeys.join(',')
   const fixedSet = useMemo(() => new Set(fixedKeyStr.split(',')), [fixedKeyStr])
+  const defaultHiddenKeyStr = defaultHiddenKeys?.join(',')
+  const defaultHiddenSet = useMemo(
+    () => new Set(defaultHiddenKeyStr?.split(',') ?? []),
+    [defaultHiddenKeyStr],
+  )
   const toggleableColumns = useMemo(
     () => columns.filter((c) => !fixedSet.has(c.key)),
     [columns, fixedSet],
@@ -32,10 +39,10 @@ export function useColPrefs({ storageKey, columns, fixedKeys = [] }: UseColPrefs
   const defaultPrefs = useMemo<ColPrefs>(
     () => ({
       order: columns.map((c) => c.key),
-      visible: columns.map((c) => c.key),
+      visible: columns.filter((c) => !defaultHiddenSet.has(c.key)).map((c) => c.key),
       pinned: [],
     }),
-    [columns],
+    [columns, defaultHiddenSet],
   )
 
   const loadPrefs = (): ColPrefs => {
@@ -65,7 +72,8 @@ export function useColPrefs({ storageKey, columns, fixedKeys = [] }: UseColPrefs
           }
           const known = new Set(order)
           const visible = (p.visible ?? []).filter((k) => known.has(k))
-          for (const k of added) if (!visible.includes(k)) visible.push(k)
+          // 新增列默认可见，但 defaultHiddenKeys 内的列保持隐藏
+          for (const k of added) if (!visible.includes(k) && !defaultHiddenSet.has(k)) visible.push(k)
           return {
             order,
             visible,

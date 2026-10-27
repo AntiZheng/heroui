@@ -44,6 +44,7 @@ export interface UserPayload {
   postIds: number[]
   email?: string
   phonenumber?: string
+  avatar?: string
   sex?: string
   status?: string
   remark?: string
