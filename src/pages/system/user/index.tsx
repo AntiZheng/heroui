@@ -70,7 +70,8 @@ const columns = [
   { key: 'user_id', label: 'ID' },
   { key: 'user_name', label: '账号' },
   { key: 'nick_name', label: '昵称' },
-  { key: 'avatar', label: '头像' },
+  { key: 'dept_name', label: '部门' },
+  { key: 'posts', label: '岗位' },
   { key: 'phonenumber', label: '手机号' },
   { key: 'status', label: '状态' },
   { key: 'status_switch', label: '启用' },
@@ -94,7 +95,6 @@ export default function UserPage() {
     storageKey: 'user-table-cols',
     columns,
     fixedKeys: ['actions'],
-    defaultHiddenKeys: ['avatar'],
   })
   const visibleColumns = colCtrl.visibleColumns
   const { stickyColProps } = useStickyColumns({
@@ -117,6 +117,12 @@ export default function UserPage() {
     queryFn: getDeptTree,
     select: flattenDeptTree,
   })
+
+  const deptLabelMap = useMemo(() => {
+    const m = new Map<number, string>()
+    for (const d of deptOptions ?? []) m.set(d.id, d.label.trim())
+    return m
+  }, [deptOptions])
 
   const { data, isPending } = useQuery({
     queryKey: ['user-list', query],
@@ -175,13 +181,36 @@ export default function UserPage() {
 
   const renderCell = (row: SysUserRow, key: string) => {
     switch (key) {
-      case 'avatar':
-        return row.avatar ? (
-          <img src={row.avatar} alt={row.nick_name} className="size-8 rounded-full object-cover" />
-        ) : (
-          <span className="flex size-8 items-center justify-center rounded-full bg-surface-secondary text-xs text-muted">
-            {(row.nick_name?.slice(0, 1) ?? '—').toUpperCase()}
+      case 'nick_name':
+        return (
+          <span className="flex items-center gap-2 whitespace-nowrap">
+            {row.avatar ? (
+              <img src={row.avatar} alt="" className="size-6 shrink-0 rounded-full object-cover" />
+            ) : (
+              <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-surface-secondary text-xs text-muted">
+                {(row.nick_name?.slice(0, 1) ?? '—').toUpperCase()}
+              </span>
+            )}
+            <span className="truncate">{row.nick_name || '—'}</span>
           </span>
+        )
+      case 'dept_name':
+        return (
+          <span className="whitespace-nowrap">
+            {(row.dept_id != null && deptLabelMap.get(row.dept_id)) || '—'}
+          </span>
+        )
+      case 'posts':
+        return row.posts?.length ? (
+          <span className="flex flex-wrap items-center gap-1">
+            {row.posts.map((p) => (
+              <Chip key={p.post_id} size="sm" variant="soft" color="default">
+                {p.post_name}
+              </Chip>
+            ))}
+          </span>
+        ) : (
+          <span>—</span>
         )
       case 'status':
         return (

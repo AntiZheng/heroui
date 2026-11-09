@@ -25,13 +25,6 @@ const TONE_CLASS: Record<Tone, string> = {
   danger: 'bg-danger-soft text-danger-soft-foreground',
 }
 
-const HEADER_TINT: Record<Tone, string> = {
-  accent: 'bg-linear-to-b from-accent-soft via-accent-soft/40 to-transparent',
-  success: 'bg-linear-to-b from-success-soft via-success-soft/40 to-transparent',
-  warning: 'bg-linear-to-b from-warning-soft via-warning-soft/40 to-transparent',
-  danger: 'bg-linear-to-b from-danger-soft via-danger-soft/40 to-transparent',
-}
-
 interface Props {
   isOpen: boolean
   onClose: () => void
@@ -71,7 +64,7 @@ export default function FormModal({
           <ModalDialog>
             <ModalCloseTrigger className="top-5" />
             <ModalHeader
-              className={`-mx-6 -mt-6 border-b border-separator/60 px-6 pt-5 pb-4 pe-14 ${HEADER_TINT[tone]}`}
+              className="-mx-6 -mt-6 border-b border-separator/60 px-6 pt-5 pb-4 pe-14"
             >
               <div className="flex items-center gap-3">
                 {Icon && (

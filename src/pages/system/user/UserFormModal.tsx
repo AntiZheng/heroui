@@ -19,7 +19,8 @@ import { UserRound } from 'lucide-react'
 import FormModal from '../../../components/FormModal'
 import { FormSection, FormSwitch, ReadOnlyInput } from '../../../components/FormSection'
 import { useModalBackdropVariant } from '../../../components/useModalBackdrop'
-import { addUser, editUser, getDeptTree } from '../../../api/user'
+import { addUser, editUser, getDeptTree, getUserDetail } from '../../../api/user'
+import { getPostList } from '../../../api/post'
 import { uploadAdminAvatar } from '../../../api/profile'
 import { hasPermission } from '../../../stores/auth'
 import { flattenDeptTree } from './deptTree'
@@ -36,6 +37,7 @@ const emptyForm = {
   nickName: '',
   password: '',
   deptId: new Set<string>(),
+  postIds: new Set<string>(),
   phonenumber: '',
   email: '',
   avatar: '',
@@ -57,6 +59,25 @@ export default function UserFormModal({ isOpen, editing, onClose }: Props) {
   const { data: deptTreeData } = useQuery({ queryKey: ['dept-tree'], queryFn: getDeptTree })
   const deptOptions = useMemo(() => flattenDeptTree(deptTreeData ?? []), [deptTreeData])
 
+  const { data: postData } = useQuery({
+    queryKey: ['post-options'],
+    queryFn: () => getPostList({ pageNum: 1, pageSize: 100 }),
+    enabled: isOpen,
+  })
+  const postOptions = useMemo(() => postData?.rows ?? [], [postData])
+
+  const { data: userDetail } = useQuery({
+    queryKey: ['user-detail', editing?.user_id],
+    queryFn: () => getUserDetail(editing!.user_id),
+    enabled: isOpen && !!editing,
+  })
+  // 编辑弹窗打开或详情到达时回填已有岗位（列表行不带 postIds，只能从详情接口取）
+  useEffect(() => {
+    if (isOpen && userDetail) {
+      setForm((f) => ({ ...f, postIds: new Set((userDetail.post_ids ?? []).map(String)) }))
+    }
+  }, [isOpen, userDetail])
+
   useEffect(() => {
     if (isOpen) {
       setForm(
@@ -70,6 +91,7 @@ export default function UserFormModal({ isOpen, editing, onClose }: Props) {
               email: editing.email ?? '',
               avatar: editing.avatar ?? '',
               status: editing.status,
+              postIds: new Set<string>(),
             }
           : emptyForm,
       )
@@ -112,7 +134,7 @@ export default function UserFormModal({ isOpen, editing, onClose }: Props) {
         nickName: form.nickName,
         deptId: Number(Array.from(form.deptId)[0]),
         roleIds: [],
-        postIds: [],
+        postIds: Array.from(form.postIds).map(Number),
         phonenumber: form.phonenumber || undefined,
         email: form.email || undefined,
         avatar: form.avatar || undefined,
@@ -127,6 +149,7 @@ export default function UserFormModal({ isOpen, editing, onClose }: Props) {
       }
       queryClient.invalidateQueries({ queryKey: ['user-list'] })
       queryClient.invalidateQueries({ queryKey: ['user-total'] })
+      queryClient.invalidateQueries({ queryKey: ['user-detail'] })
       onClose()
     } catch {
       return
@@ -255,6 +278,38 @@ export default function UserFormModal({ isOpen, editing, onClose }: Props) {
                 </ListBox>
               </SelectPopover>
             </SelectRoot>
+            <div className="col-span-2">
+              <SelectRoot
+                aria-label="岗位"
+                selectionMode="multiple"
+                value={Array.from(form.postIds)}
+                onChange={(keys) =>
+                  setForm((f) => ({ ...f, postIds: new Set(keys.map(String)) }))
+                }
+              >
+                <Label>岗位</Label>
+                <SelectTrigger>
+                  <SelectValue>
+                    {form.postIds.size > 0
+                      ? postOptions
+                          .filter((p) => form.postIds.has(String(p.post_id)))
+                          .map((p) => p.post_name)
+                          .join('、')
+                      : '请选择岗位'}
+                  </SelectValue>
+                  <SelectIndicator />
+                </SelectTrigger>
+                <SelectPopover>
+                  <ListBox>
+                    {postOptions.map((p) => (
+                      <ListBoxItem key={String(p.post_id)} id={String(p.post_id)}>
+                        {p.post_name}
+                      </ListBoxItem>
+                    ))}
+                  </ListBox>
+                </SelectPopover>
+              </SelectRoot>
+            </div>
           </div>
         </FormSection>
 

@@ -10,7 +10,7 @@ export interface CurrentUserInfo {
   [key: string]: unknown
 }
 
-// /user/list rows 为 ORM 序列化结果，snake_case，无嵌套 dept/roles
+// /user/list rows 为 ORM 序列化结果 + posts（用户岗位，snake_case），无嵌套 dept/roles
 export interface SysUserRow {
   user_id: number
   dept_id?: number
@@ -25,6 +25,7 @@ export interface SysUserRow {
   login_date?: string | null
   create_time?: string | null
   remark?: string | null
+  posts?: { post_id: number; post_code: string; post_name: string }[]
 }
 
 export interface DeptTreeNode {

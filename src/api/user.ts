@@ -13,6 +13,15 @@ export interface UserListQuery {
 export const getUserList = (params: UserListQuery) =>
   request.get<never, PageResult<SysUserRow>>('/system/user/list', { params })
 
+export interface UserDetail {
+  user_id: number
+  role_ids?: number[]
+  post_ids?: number[]
+}
+
+export const getUserDetail = (userId: number) =>
+  request.get<never, UserDetail>(`/system/user/${userId}`)
+
 export const getDeptTree = () => request.get<never, DeptTreeNode[]>('/system/user/deptTree')
 
 export const addUser = (data: UserPayload) => request.post<never, null>('/system/user', data)

@@ -45,7 +45,7 @@ export default function NoticeDetailDrawer({ notice, onClose }: Props) {
         <DrawerContent placement="right">
           <DrawerDialog className="w-full max-w-[92vw] sm:w-[560px]">
             <DrawerCloseTrigger />
-            <DrawerHeader className="-mx-6 -mt-6 flex-row items-center gap-3 border-b border-separator/60 bg-linear-to-b from-accent-soft via-accent-soft/40 to-transparent px-6 pt-5 pb-4 pe-14">
+            <DrawerHeader className="-mx-6 -mt-6 flex-row items-center gap-3 border-b border-separator/60 px-6 pt-5 pb-4 pe-14">
               <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent-soft-foreground">
                 <Megaphone size={16} aria-hidden />
               </span>

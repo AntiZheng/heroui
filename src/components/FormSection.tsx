@@ -7,10 +7,13 @@ type Tone = 'accent' | 'success' | 'warning' | 'danger'
 export function FormSection({
   title,
   tone = 'accent',
+  labelWidth,
   children,
 }: {
   title: string
   tone?: Tone
+  /** 本节标签列宽度（CSS 值，如 80px）；未设置时子项用各自默认 9rem */
+  labelWidth?: string
   children: ReactNode
 }) {
   return (
@@ -23,7 +26,9 @@ export function FormSection({
       >
         {title}
       </Chip>
-      <div className="pl-3">{children}</div>
+      <div className="pl-3" style={labelWidth ? { ['--label-w' as string]: labelWidth } : undefined}>
+        {children}
+      </div>
     </section>
   )
 }
