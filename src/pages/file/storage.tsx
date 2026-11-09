@@ -86,17 +86,24 @@ function Field({
   onChange,
   placeholder,
   type = 'text',
+  full = false,
 }: {
   label: string
   value: string
   onChange: (v: string) => void
   placeholder?: string
   type?: 'text' | 'password' | 'number'
+  full?: boolean
 }) {
   return (
-    <TextField value={value} onChange={onChange} aria-label={label}>
-      <Label className="text-xs font-medium text-muted">{label}</Label>
-      <Input type={type} placeholder={placeholder} />
+    <TextField
+      value={value}
+      onChange={onChange}
+      aria-label={label}
+      className={`flex flex-row! items-center gap-2${full ? ' md:col-span-2' : ''}`}
+    >
+      <Label className="w-[var(--label-w,9rem)] shrink-0 text-[13px] font-medium whitespace-nowrap text-muted">{label}</Label>
+      <Input type={type} placeholder={placeholder} className="min-w-0 flex-1" />
     </TextField>
   )
 }
@@ -244,7 +251,7 @@ export default function StoragePage() {
   return (
     <div className="flex h-full min-h-0 flex-col gap-6">
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="flex w-full max-w-3xl flex-col gap-6 rounded-2xl border border-separator bg-surface p-6 shadow-sm">
+        <div className="flex w-full flex-col gap-6 rounded-2xl border border-separator bg-surface px-12 py-6 shadow-sm">
           {/* 标题行 */}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <Typography.Heading level={6} className="text-[13px] leading-4">
@@ -279,9 +286,9 @@ export default function StoragePage() {
             )}
           </div>
 
-          <FormSection title="连接信息" tone="accent">
-            <div className="flex flex-col gap-4">
-              <div className="grid grid-cols-2 gap-4">
+          <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
+            <FormSection title="连接信息" tone="accent" labelWidth="80px">
+              <div className="grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-2">
                 <Field
                   label="内部端点"
                   value={form.internal_endpoint}
@@ -295,30 +302,28 @@ export default function StoragePage() {
                   placeholder="如 https://oss.example.com"
                 />
                 <Field
+                  label="Access Key"
+                  value={form.access_key}
+                  onChange={(v) => setField('access_key', v)}
+                />
+                <Field
+                  label="Secret Key"
+                  type="password"
+                  value={secretInput}
+                  onChange={setSecretInput}
+                  placeholder={secretPlaceholder}
+                />
+                <Field
                   label="Region"
                   value={form.region}
                   onChange={(v) => setField('region', v)}
                   placeholder="如 us-east-1"
                 />
-                <Field
-                  label="Access Key"
-                  value={form.access_key}
-                  onChange={(v) => setField('access_key', v)}
-                />
               </div>
-              <Field
-                label="Secret Key"
-                type="password"
-                value={secretInput}
-                onChange={setSecretInput}
-                placeholder={secretPlaceholder}
-              />
-            </div>
-          </FormSection>
+            </FormSection>
 
-          <FormSection title="桶配置" tone="accent">
-            <div className="flex flex-col gap-4">
-              <div className="grid grid-cols-2 gap-4">
+            <FormSection title="桶配置" tone="accent" labelWidth="80px">
+              <div className="grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-2">
                 <Field
                   label="私有桶"
                   value={form.private_bucket}
@@ -329,19 +334,18 @@ export default function StoragePage() {
                   value={form.public_bucket}
                   onChange={(v) => setField('public_bucket', v)}
                 />
+                <Field
+                  full
+                  label="公开基础地址"
+                  value={form.public_base_url}
+                  onChange={(v) => setField('public_base_url', v)}
+                  placeholder="可选，留空使用公开端点/公开桶"
+                />
               </div>
-              <Field
-                label="公开基础地址"
-                value={form.public_base_url}
-                onChange={(v) => setField('public_base_url', v)}
-                placeholder="可选，留空使用公开端点/公开桶"
-              />
-            </div>
-          </FormSection>
+            </FormSection>
 
-          <FormSection title="上传策略" tone="success">
-            <div className="flex flex-col gap-4">
-              <div className="grid grid-cols-2 gap-4">
+            <FormSection title="上传策略" tone="success" labelWidth="112px">
+              <div className="grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-2">
                 <Field
                   label="单文件上限（MB）"
                   type="number"
@@ -370,17 +374,16 @@ export default function StoragePage() {
                   onChange={(v) => setField('upload_concurrency', v)}
                   placeholder={`当前 ${data?.upload_concurrency ?? '—'}`}
                 />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
                 <SelectRoot
                   aria-label="默认可见性"
                   selectedKey={form.default_visibility}
                   onSelectionChange={(key) => {
                     if (key != null) setField('default_visibility', String(key))
                   }}
+                  className="flex flex-row! items-center gap-2"
                 >
-                  <Label className="text-xs font-medium text-muted">默认可见性</Label>
-                  <SelectTrigger>
+                  <Label className="w-[var(--label-w,9rem)] shrink-0 text-[13px] font-medium whitespace-nowrap text-muted">默认可见性</Label>
+                  <SelectTrigger className="min-w-0 flex-1">
                     <SelectValue />
                     <SelectIndicator />
                   </SelectTrigger>
@@ -398,18 +401,17 @@ export default function StoragePage() {
                   placeholder="逗号分隔，如 pdf,docx；留空不限制"
                 />
               </div>
-            </div>
-          </FormSection>
+            </FormSection>
 
-          <FormSection title="访问与 CORS" tone="warning">
-            <div className="flex flex-col gap-4">
-              <Field
-                label="CORS 允许来源"
-                value={form.allowed_origins}
-                onChange={(v) => setField('allowed_origins', v)}
-                placeholder="逗号分隔，生产环境追加正式域名"
-              />
-              <div className="grid grid-cols-2 gap-4">
+            <FormSection title="访问与 CORS" tone="warning" labelWidth="144px">
+              <div className="grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-2">
+                <Field
+                  full
+                  label="CORS 允许来源"
+                  value={form.allowed_origins}
+                  onChange={(v) => setField('allowed_origins', v)}
+                  placeholder="逗号分隔，生产环境追加正式域名"
+                />
                 <Field
                   label="下载签名有效期（秒）"
                   type="number"
@@ -418,40 +420,40 @@ export default function StoragePage() {
                   placeholder={`当前 ${data?.download_presign_expire_seconds ?? '—'}`}
                 />
                 <Field
-                  label="上传会话有效期（小时）"
-                  type="number"
-                  value={form.upload_session_expire_hours}
-                  onChange={(v) => setField('upload_session_expire_hours', v)}
-                  placeholder={`当前 ${data?.upload_session_expire_hours ?? '—'}`}
-                />
-                <Field
                   label="上传签名有效期（分钟）"
                   type="number"
                   value={form.upload_presign_expire_minutes}
                   onChange={(v) => setField('upload_presign_expire_minutes', v)}
                   placeholder={`当前 ${data?.upload_presign_expire_minutes ?? '—'}`}
                 />
+                <Field
+                  label="上传会话有效期（小时）"
+                  type="number"
+                  value={form.upload_session_expire_hours}
+                  onChange={(v) => setField('upload_session_expire_hours', v)}
+                  placeholder={`当前 ${data?.upload_session_expire_hours ?? '—'}`}
+                />
               </div>
-            </div>
-          </FormSection>
+            </FormSection>
 
-          {/* 结果展示区 */}
-          {(testResult.length > 0 || initResult.length > 0) && (
-            <div className="flex flex-col gap-4 border-t border-separator pt-4">
-              {testResult.length > 0 && (
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs font-semibold text-foreground">连接测试结果</span>
-                  <ResultRows items={testResult} />
-                </div>
-              )}
-              {initResult.length > 0 && (
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs font-semibold text-foreground">初始化结果</span>
-                  <ResultRows items={initResult} />
-                </div>
-              )}
-            </div>
-          )}
+            {/* 结果展示区 */}
+            {(testResult.length > 0 || initResult.length > 0) && (
+              <div className="flex flex-col gap-4 border-t border-separator pt-4">
+                {testResult.length > 0 && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs font-semibold text-foreground">连接测试结果</span>
+                    <ResultRows items={testResult} />
+                  </div>
+                )}
+                {initResult.length > 0 && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs font-semibold text-foreground">初始化结果</span>
+                    <ResultRows items={initResult} />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

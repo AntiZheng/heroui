@@ -1,4 +1,4 @@
-// 左侧目录树面板：虚拟根「全部文件」+ 自封装轻量树，支持点击导航、hover 管理、拖拽移动与外部文件拖入上传
+// 左侧目录树面板：虚拟根「根目录」+ 自封装轻量树，支持点击导航、hover 管理、拖拽移动与外部文件拖入上传
 import { useEffect, useMemo, useState } from 'react'
 import { ChevronRight, FolderPlus, SquarePen, Trash2 } from 'lucide-react'
 import { ScrollShadow, Tooltip, TooltipContent, TooltipTrigger } from '@heroui/react'
@@ -301,7 +301,7 @@ export default function FolderTreePanel({
             {rootChildren.length > 0 ? (
               <button
                 type="button"
-                aria-label={expanded.has(ROOT_ID) ? '折叠全部文件' : '展开全部文件'}
+                aria-label={expanded.has(ROOT_ID) ? '折叠根目录' : '展开根目录'}
                 className="flex size-4 shrink-0 items-center justify-center rounded text-muted hover:text-foreground"
                 onClick={(e) => {
                   e.stopPropagation()
@@ -317,7 +317,7 @@ export default function FolderTreePanel({
             ) : (
               <span className="size-4 shrink-0" />
             )}
-            <span className="min-w-0 flex-1 truncate">全部文件</span>
+            <span className="min-w-0 flex-1 truncate">根目录</span>
           </div>
           {expanded.has(ROOT_ID) && rootChildren.map((c) => renderNode(c, 1))}
         </div>

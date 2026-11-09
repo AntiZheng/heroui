@@ -271,7 +271,7 @@ export function MoveDialog({ isOpen, target, kind, folders, onClose }: MoveDialo
         </SelectTrigger>
         <SelectPopover>
           <ListBox>
-            <ListBoxItem id={0}>全部文件（根目录）</ListBoxItem>
+            <ListBoxItem id={0}>全部文件</ListBoxItem>
             {options.map((o) => (
               <ListBoxItem
                 key={o.id}
@@ -506,7 +506,7 @@ export function PreviewModal({ target, onClose }: PreviewModalProps) {
         <ModalContainer size="lg">
           <ModalDialog>
             <ModalCloseTrigger className="top-5" />
-            <ModalHeader className="-mx-6 -mt-6 border-b border-separator/60 px-6 pt-5 pb-4 pe-14 bg-linear-to-b from-accent-soft via-accent-soft/40 to-transparent">
+            <ModalHeader className="-mx-6 -mt-6 border-b border-separator/60 px-6 pt-5 pb-4 pe-14">
               <div className="flex min-w-0 cursor-default items-center gap-3 select-none">
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent-soft-foreground">
                   <FileIcon size={16} aria-hidden />

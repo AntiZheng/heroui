@@ -4,6 +4,8 @@ import type { Selection } from 'react-aria-components'
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Button,
+  Chip,
+  Dropdown,
   EmptyState,
   SearchField,
   Spinner,
@@ -23,6 +25,7 @@ import {
 } from '@heroui/react'
 import {
   Download,
+  EllipsisVertical,
   Eye,
   Folder,
   FolderOpen,
@@ -316,7 +319,7 @@ export default function FilePage() {
           onDoubleClick={() => enterFolder(row.folder_id)}
         >
           <Folder size={14} aria-hidden className="shrink-0 text-warning" />
-          <span className="block max-w-[240px] truncate">{row.folder_name}</span>
+          <span className="block truncate">{row.folder_name}</span>
         </span>
       )
     }
@@ -324,7 +327,7 @@ export default function FilePage() {
     return (
       <span className="flex items-center gap-1.5">
         <Icon size={14} aria-hidden className="shrink-0 text-muted" />
-        <span className="block max-w-[280px] truncate">{row.file_name}</span>
+        <span className="block truncate">{row.file_name}</span>
       </span>
     )
   }
@@ -358,7 +361,13 @@ export default function FilePage() {
         )
       }
       case 'category':
-        return row.kind === 'file' ? <CategoryChip category={row.category} /> : textCell(null)
+        return row.kind === 'file' ? (
+          <CategoryChip category={row.category} />
+        ) : (
+          <Chip size="sm" variant="soft" color="accent">
+            目录
+          </Chip>
+        )
       case 'file_size':
         return textCell(row.kind === 'file' ? formatSize(row.file_size) : null)
       case 'visibility':
@@ -366,105 +375,145 @@ export default function FilePage() {
       case 'source':
         return renderSourceCell(row)
       case 'create_time':
-        return textCell(formatTime(row.kind === 'file' ? row.create_time : null))
+        return textCell(formatTime(row.create_time))
       case 'actions': {
-        const iconBtn = (
-          label: string,
-          icon: ReactNode,
-          onPress: () => void,
-          variant: 'tertiary' | 'danger-soft' = 'tertiary',
-        ) => (
-          <Tooltip>
-            <TooltipTrigger>
-              <Button size="sm" variant={variant} isIconOnly className="rounded-full!" onPress={onPress} aria-label={label}>
-                {icon}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{label}</TooltipContent>
-          </Tooltip>
-        )
-        if (row.kind === 'folder') {
-          const canManage = row.is_system !== 1
+        // 三个点菜单：图标 12px、删除项 danger 红字，无可用操作时不渲染
+        const actionMenu = (
+          items: {
+            id: string
+            label: string
+            icon: ReactNode
+            danger?: boolean
+            onAction: () => void
+          }[],
+        ) => {
+          if (items.length === 0) return null
           return (
-            <div className="flex items-center gap-1">
-              {iconBtn(
-                '打开',
-                <FolderOpen size={12} className="size-3!" aria-hidden />,
-                () => enterFolder(row.folder_id),
-              )}
-              {editPerm &&
-                canManage &&
-                iconBtn(
-                  '重命名',
-                  <SquarePen size={12} className="size-3!" aria-hidden />,
-                  () => setFolderForm({ open: true, editing: row }),
-                )}
-              {editPerm &&
-                canManage &&
-                iconBtn(
-                  '移动',
-                  <FolderInput size={12} className="size-3!" aria-hidden />,
-                  () => setMoving({ kind: 'folder', row }),
-                )}
-              {delPerm &&
-                canManage &&
-                iconBtn(
-                  '删除',
-                  <Trash2 size={12} className="size-3!" aria-hidden />,
-                  () =>
-                    setDeleting({
-                      kind: 'folder',
-                      names: [row.folder_name],
-                      ids: [row.folder_id],
-                    }),
-                  'danger-soft',
-                )}
-            </div>
+            <Dropdown>
+              <Button
+                size="sm"
+                variant="tertiary"
+                isIconOnly
+                className="rounded-full!"
+                aria-label="更多操作"
+              >
+                <EllipsisVertical size={12} className="size-3!" aria-hidden />
+              </Button>
+              <Dropdown.Popover placement="bottom end">
+                <Dropdown.Menu aria-label="行操作">
+                  {items.map((item) => (
+                    <Dropdown.Item
+                      key={item.id}
+                      id={item.id}
+                      variant={item.danger ? 'danger' : 'default'}
+                      className="gap-2"
+                      onAction={item.onAction}
+                    >
+                      {item.icon}
+                      {item.label}
+                    </Dropdown.Item>
+                  ))}
+                </Dropdown.Menu>
+              </Dropdown.Popover>
+            </Dropdown>
           )
         }
+        if (row.kind === 'folder') {
+          const canManage = row.is_system !== 1
+          return actionMenu([
+            {
+              id: 'open',
+              label: '打开',
+              icon: <FolderOpen size={12} className="size-3!" aria-hidden />,
+              onAction: () => enterFolder(row.folder_id),
+            },
+            ...(editPerm && canManage
+              ? [
+                  {
+                    id: 'rename',
+                    label: '重命名',
+                    icon: <SquarePen size={12} className="size-3!" aria-hidden />,
+                    onAction: () => setFolderForm({ open: true, editing: row }),
+                  },
+                  {
+                    id: 'move',
+                    label: '移动',
+                    icon: <FolderInput size={12} className="size-3!" aria-hidden />,
+                    onAction: () => setMoving({ kind: 'folder', row }),
+                  },
+                ]
+              : []),
+            ...(delPerm && canManage
+              ? [
+                  {
+                    id: 'delete',
+                    label: '删除',
+                    icon: <Trash2 size={12} className="size-3!" aria-hidden />,
+                    danger: true,
+                    onAction: () =>
+                      setDeleting({
+                        kind: 'folder',
+                        names: [row.folder_name],
+                        ids: [row.folder_id],
+                      }),
+                  },
+                ]
+              : []),
+          ])
+        }
         const canDownload = hasPermission('file:download')
-        return (
-          <div className="flex items-center gap-1">
-            {canDownload &&
-              iconBtn(
-                '预览',
-                <Eye size={12} className="size-3!" aria-hidden />,
-                () => setPreview(row),
-              )}
-            {canDownload &&
-              iconBtn(
-                '下载',
-                <Download size={12} className="size-3!" aria-hidden />,
-                () => void handleDownload(row),
-              )}
-            {canDownload &&
-              iconBtn(
-                '复制链接',
-                <Link2 size={12} className="size-3!" aria-hidden />,
-                () => void handleCopyLink(row),
-              )}
-            {editPerm &&
-              iconBtn(
-                '重命名',
-                <SquarePen size={12} className="size-3!" aria-hidden />,
-                () => setRenaming(row),
-              )}
-            {editPerm &&
-              iconBtn(
-                '移动',
-                <FolderInput size={12} className="size-3!" aria-hidden />,
-                () => setMoving({ kind: 'file', row }),
-              )}
-            {delPerm &&
-              iconBtn(
-                '删除',
-                <Trash2 size={12} className="size-3!" aria-hidden />,
-                () =>
-                  setDeleting({ kind: 'file', names: [row.file_name], ids: [row.file_id] }),
-                'danger-soft',
-              )}
-          </div>
-        )
+        return actionMenu([
+          ...(canDownload
+            ? [
+                {
+                  id: 'preview',
+                  label: '预览',
+                  icon: <Eye size={12} className="size-3!" aria-hidden />,
+                  onAction: () => setPreview(row),
+                },
+                {
+                  id: 'download',
+                  label: '下载',
+                  icon: <Download size={12} className="size-3!" aria-hidden />,
+                  onAction: () => void handleDownload(row),
+                },
+                {
+                  id: 'copy-link',
+                  label: '复制链接',
+                  icon: <Link2 size={12} className="size-3!" aria-hidden />,
+                  onAction: () => void handleCopyLink(row),
+                },
+              ]
+            : []),
+          ...(editPerm
+            ? [
+                {
+                  id: 'rename',
+                  label: '重命名',
+                  icon: <SquarePen size={12} className="size-3!" aria-hidden />,
+                  onAction: () => setRenaming(row),
+                },
+                {
+                  id: 'move',
+                  label: '移动',
+                  icon: <FolderInput size={12} className="size-3!" aria-hidden />,
+                  onAction: () => setMoving({ kind: 'file', row }),
+                },
+              ]
+            : []),
+          ...(delPerm
+            ? [
+                {
+                  id: 'delete',
+                  label: '删除',
+                  icon: <Trash2 size={12} className="size-3!" aria-hidden />,
+                  danger: true,
+                  onAction: () =>
+                    setDeleting({ kind: 'file', names: [row.file_name], ids: [row.file_id] }),
+                },
+              ]
+            : []),
+        ])
       }
       default:
         return textCell((row as unknown as Record<string, unknown>)[key])
@@ -581,7 +630,9 @@ export default function FilePage() {
                 </TableColumn>
                 {visibleColumns.map((col) => {
                   const sticky = stickyColProps(col.key, true)
-                  const merged = `whitespace-nowrap ${'className' in sticky ? sticky.className : ''}`
+                  // 名称列宽度基准 280px，配合 td 的 max-w-0：钳制内容贡献、剩余宽继续归名称列
+                  const base = col.key === 'file_name' ? 'w-[280px] ' : ''
+                  const merged = `whitespace-nowrap ${base}${'className' in sticky ? sticky.className : ''}`
                   return (
                     <TableColumn
                       key={col.key}
@@ -623,11 +674,24 @@ export default function FilePage() {
                         <span aria-hidden className="block size-4" />
                       )}
                     </TableCell>
-                    {visibleColumns.map((col) => (
-                      <TableCell key={col.key} {...stickyColProps(col.key, false)}>
-                        {renderCell(row, col.key)}
-                      </TableCell>
-                    ))}
+                    {visibleColumns.map((col) => {
+                      const sticky = stickyColProps(col.key, false)
+                      // 名称列 max-w-0：钳制内容对列宽的贡献，剩余空间全给名称列，文字铺满后截断
+                      const cls =
+                        col.key === 'file_name'
+                          ? [
+                              'className' in sticky ? sticky.className : '',
+                              'max-w-0',
+                            ].join(' ')
+                          : 'className' in sticky
+                            ? sticky.className
+                            : undefined
+                      return (
+                        <TableCell key={col.key} {...sticky} className={cls}>
+                          {renderCell(row, col.key)}
+                        </TableCell>
+                      )
+                    })}
                   </TableRow>
                 )}
               </TableBody>

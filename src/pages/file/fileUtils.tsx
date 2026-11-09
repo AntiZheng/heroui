@@ -31,9 +31,18 @@ export function formatTime(value?: string | null): string {
   return value ? String(value).replace('T', ' ').slice(0, 19) : '—'
 }
 
+const CATEGORY_CHIP_COLORS: Record<FileCategory, 'accent' | 'danger' | 'warning' | 'success' | 'default'> = {
+  image: 'warning',
+  video: 'danger',
+  audio: 'success',
+  archive: 'warning',
+  document: 'accent',
+  other: 'default',
+}
+
 export function CategoryChip({ category }: { category: FileCategory }) {
   return (
-    <Chip size="sm" variant="soft" color="default">
+    <Chip size="sm" variant="soft" color={CATEGORY_CHIP_COLORS[category]}>
       {FILE_CATEGORY_LABELS[category]}
     </Chip>
   )
@@ -41,7 +50,7 @@ export function CategoryChip({ category }: { category: FileCategory }) {
 
 export function VisibilityChip({ visibility }: { visibility: FileVisibility }) {
   return (
-    <Chip size="sm" variant="soft" color={visibility === 'public' ? 'success' : 'default'}>
+    <Chip size="sm" variant="soft" color={visibility === 'public' ? 'success' : 'warning'}>
       {visibility === 'public' ? '公开' : '私有'}
     </Chip>
   )

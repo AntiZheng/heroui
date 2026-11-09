@@ -40,6 +40,7 @@ export interface FileFolder {
   folder_path: string
   is_system: number
   sort: number
+  create_time?: string | null
 }
 
 export interface FileListQuery {

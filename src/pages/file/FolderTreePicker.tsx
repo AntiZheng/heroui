@@ -119,7 +119,7 @@ export default function FolderTreePicker({ folders, value, onChange }: Props) {
   const rootChildren = childrenMap.get(ROOT_ID) ?? []
   const rootIsSelected = value === ROOT_ID
   const triggerLabel =
-    value === ROOT_ID ? '全部文件（根目录）' : (byId.get(value)?.folder_path ?? `目录 #${value}`)
+    value === ROOT_ID ? '根目录' : (byId.get(value)?.folder_path ?? `目录 #${value}`)
 
   return (
     <Popover isOpen={open} onOpenChange={setOpen}>
@@ -165,7 +165,7 @@ export default function FolderTreePicker({ folders, value, onChange }: Props) {
               ) : (
                 <span className="size-4 shrink-0" />
               )}
-              <span className="min-w-0 flex-1 truncate">全部文件（根目录）</span>
+              <span className="min-w-0 flex-1 truncate">根目录</span>
             </div>
             {expanded.has(ROOT_ID) && rootChildren.map((c) => renderNode(c, 1))}
           </div>
