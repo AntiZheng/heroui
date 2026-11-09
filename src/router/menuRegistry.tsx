@@ -19,6 +19,7 @@ const StoragePage = lazy(() => import('../pages/file/storage'))
 const ApiKeyPage = lazy(() => import('../pages/file/api-key'))
 const MapPage = lazy(() => import('../pages/map'))
 const AMapPage = lazy(() => import('../pages/map/amap'))
+const TrackPage = lazy(() => import('../pages/map/track'))
 const EditorPage = lazy(() => import('../pages/editor'))
 
 export interface MenuExtraRoute {
@@ -60,4 +61,5 @@ export const menuPageRegistry: Record<string, MenuPageDef> = {
   editor: { element: <Suspense><EditorPage /></Suspense> },
   map: { element: <Suspense><MapPage /></Suspense> },
   'map/amap': { element: <Suspense><AMapPage /></Suspense> },
+  'map/track': { element: <Suspense><TrackPage /></Suspense> },
 }
