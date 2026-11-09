@@ -14,6 +14,9 @@ export const MAP_STYLES = {
   dark: 'https://tiles.openfreemap.org/styles/dark',
 } as const
 
+// 全屏展示专用彩色底图：Liberty 自带分色地物与浅色海洋，配合大气层接近参考图的彩色地球
+const FULLSCREEN_MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty'
+
 const media = window.matchMedia('(prefers-color-scheme: dark)')
 
 function useEffectiveTheme(): 'light' | 'dark' {
@@ -37,6 +40,8 @@ export interface MapRootProps {
   className?: string
   /** 标注语言（OpenMapTiles name:<lang> 字段），如 'zh'；缺翻译的要素回退原标注 */
   language?: string
+  /** 全屏时保持当前底图不切换（默认全屏会切换到专用彩色底图 + 星空氛围） */
+  keepStyleInFullscreen?: boolean
   children?: ReactNode
 }
 
@@ -58,6 +63,31 @@ function applyLabelLanguage(m: MlMap, lang: string, originals: Map<string, unkno
       'text-field',
       lang === 'local' ? (base as never) : (['coalesce', ['get', `name:${lang}`], base] as never),
     )
+  }
+}
+
+// 全屏：彩色底图 + 球体轮廓外发光；星空由容器 CSS 透出，标注反白并加深色描边保证可读。
+// 物理大气层（setSky）会把光晕铺在球面上无法只留外圈，因此 atmosphere-blend 压到 0.15
+// 仅保留一点边缘大气感，外圈光晕由 .map-starfield .maplibregl-canvas 的 drop-shadow 实现。
+// 太阳固定在相机正后方（viewport 锚定），让残留的大气感整圈均匀。
+function applyFullscreenGlobeTone(m: MlMap) {
+  m.setSky({
+    'sky-color': '#0a1628',
+    'sky-horizon-blend': 0.5,
+    'horizon-color': '#a8d5ff',
+    'horizon-fog-blend': 0.8,
+    'fog-color': '#bcdcff',
+    'fog-ground-blend': 0,
+    'atmosphere-blend': ['interpolate', ['linear'], ['zoom'], 0, 0.15, 5, 0.15, 7, 0],
+  })
+  m.setLight({ anchor: 'viewport', position: [1.15, 0, 180] })
+  if (m.getLayer('water')) {
+    m.setPaintProperty('water', 'fill-color', 'rgb(120, 180, 230)' as never)
+  }
+  for (const layer of m.getStyle().layers) {
+    if (layer.type !== 'symbol' || !layer.layout?.['text-field']) continue
+    m.setPaintProperty(layer.id, 'text-color', 'rgba(255, 255, 255, 0.96)' as never)
+    m.setPaintProperty(layer.id, 'text-halo-color', 'rgba(6, 16, 32, 0.85)' as never)
   }
 }
 
@@ -110,19 +140,25 @@ export default function MapRoot({
   mapStyle,
   className,
   language,
+  keepStyleInFullscreen = false,
   children,
 }: MapRootProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [map, setMap] = useState<MlMap | null>(null)
+  const [fullscreen, setFullscreen] = useState(false)
   const theme = useEffectiveTheme()
   const styleUrl = mapStyle ?? (theme === 'dark' ? styles.dark : styles.light) ?? MAP_STYLES.light
 
   const initialRef = useRef({ styleUrl, center, zoom, pitch, bearing })
   initialRef.current = { styleUrl, center, zoom, pitch, bearing }
   const appliedStyleRef = useRef(initialRef.current.styleUrl)
-  // style.load 会在主题切换换样式后再次触发，语言用 ref 取最新值
+  // style.load 会在主题切换换样式后再次触发，全屏/语言用 ref 取最新值
+  const fullscreenRef = useRef(fullscreen)
+  fullscreenRef.current = fullscreen
   const languageRef = useRef(language)
   languageRef.current = language
+  const keepStyleRef = useRef(keepStyleInFullscreen)
+  keepStyleRef.current = keepStyleInFullscreen
   // 各图层原始 text-field 缓存（跟随地图实例）
   const originalsRef = useRef(new Map<string, unknown>())
 
@@ -141,6 +177,7 @@ export default function MapRoot({
     })
     m.on('style.load', () => {
       m.setProjection({ type: 'globe' })
+      if (fullscreenRef.current && !keepStyleRef.current) applyFullscreenGlobeTone(m)
       if (languageRef.current) applyLabelLanguage(m, languageRef.current, originalsRef.current)
     })
     m.dragRotate.disable()
@@ -167,15 +204,35 @@ export default function MapRoot({
     }
   }, [map, language])
 
+  // 全屏状态由地图容器（或其带 data-fullscreen-root 标记的祖先）是否处于 Fullscreen 判定
   useEffect(() => {
-    if (!map || appliedStyleRef.current === styleUrl) return
-    appliedStyleRef.current = styleUrl
-    map.setStyle(styleUrl, { diff: false })
-  }, [map, styleUrl])
+    const container = containerRef.current
+    if (!container) return
+    const onChange = () => {
+      const root =
+        (container.closest('[data-fullscreen-root]') as HTMLElement | null) ?? container
+      setFullscreen(document.fullscreenElement === root)
+    }
+    document.addEventListener('fullscreenchange', onChange)
+    return () => document.removeEventListener('fullscreenchange', onChange)
+  }, [])
+
+  // 进入全屏切换彩色底图 + 大气层，退出恢复当前主题样式（keepStyleInFullscreen 时不切换）
+  useEffect(() => {
+    if (keepStyleInFullscreen) return
+    const activeStyle = fullscreen ? FULLSCREEN_MAP_STYLE : styleUrl
+    if (!map || appliedStyleRef.current === activeStyle) return
+    appliedStyleRef.current = activeStyle
+    originalsRef.current.clear()
+    map.setStyle(activeStyle, { diff: false })
+  }, [map, styleUrl, fullscreen, keepStyleInFullscreen])
 
   return (
     <MapContext.Provider value={map}>
-      <div ref={containerRef} className={`size-full ${className ?? ''}`} />
+      <div
+        ref={containerRef}
+        className={`size-full ${fullscreen && !keepStyleInFullscreen ? 'map-starfield' : ''} ${className ?? ''}`}
+      />
       {map ? children : null}
     </MapContext.Provider>
   )

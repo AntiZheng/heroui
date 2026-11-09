@@ -382,7 +382,7 @@ export function Controls({
   children?: ReactNode
 }) {
   return (
-    <div className={`absolute z-20 flex flex-col items-center gap-2 ${POSITION_CLASS[position]}`}>
+    <div className={`absolute z-40 flex flex-col items-center gap-2 ${POSITION_CLASS[position]}`}>
       {children}
     </div>
   )
@@ -449,7 +449,10 @@ export function ResetViewControl() {
 
 export function FullscreenControl() {
   const map = useAMapInstance()
-  const container = map.getContainer().parentElement ?? map.getContainer()
+  const container =
+    (map.getContainer().closest('[data-fullscreen-root]') as HTMLElement | null) ??
+    map.getContainer().parentElement ??
+    map.getContainer()
   const [isFullscreen, setIsFullscreen] = useState(() => document.fullscreenElement === container)
 
   useEffect(() => {

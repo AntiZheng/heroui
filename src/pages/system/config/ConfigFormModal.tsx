@@ -19,6 +19,8 @@ import { FormSection, FormSwitch, ReadOnlyInput } from '../../../components/Form
 import {
   addConfig,
   editConfig,
+  BUTTON_STYLE_KEY,
+  BUTTON_STYLE_OPTIONS,
   MODAL_BACKDROP_KEY,
   MODAL_BACKDROP_OPTIONS,
 } from '../../../api/config'
@@ -90,7 +92,13 @@ export default function ConfigFormModal({ isOpen, editing, onClose }: Props) {
     }
   }
 
-  const isBackdropConfig = form.configKey.trim() === MODAL_BACKDROP_KEY
+  // 枚举型参数键：键值改为下拉选择，避免手输非法值
+  const valueOptions =
+    form.configKey.trim() === MODAL_BACKDROP_KEY
+      ? MODAL_BACKDROP_OPTIONS
+      : form.configKey.trim() === BUTTON_STYLE_KEY
+        ? BUTTON_STYLE_OPTIONS
+        : null
 
   return (
     <FormModal
@@ -119,7 +127,11 @@ export default function ConfigFormModal({ isOpen, editing, onClose }: Props) {
                 ...f,
                 configKey: v,
                 configValue:
-                  v.trim() === MODAL_BACKDROP_KEY && !f.configValue ? 'opaque' : f.configValue,
+                  v.trim() === MODAL_BACKDROP_KEY && !f.configValue
+                    ? 'opaque'
+                    : v.trim() === BUTTON_STYLE_KEY && !f.configValue
+                      ? '3d'
+                      : f.configValue,
               }))
             }
             isRequired
@@ -132,7 +144,7 @@ export default function ConfigFormModal({ isOpen, editing, onClose }: Props) {
               <Input />
             )}
           </TextField>
-          {isBackdropConfig ? (
+          {valueOptions ? (
             <SelectRoot
               aria-label="参数键值"
               selectedKey={form.configValue || null}
@@ -147,7 +159,7 @@ export default function ConfigFormModal({ isOpen, editing, onClose }: Props) {
               </SelectTrigger>
               <SelectPopover>
                 <ListBox>
-                  {MODAL_BACKDROP_OPTIONS.map((opt) => (
+                  {valueOptions.map((opt) => (
                     <ListBoxItem key={opt.key} id={opt.key}>
                       {opt.label}
                     </ListBoxItem>

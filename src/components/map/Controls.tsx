@@ -210,10 +210,12 @@ export function LanguageControl({ value, onChange }: { value: string; onChange: 
   )
 }
 
-/** 全屏查看地图（对地图容器做 Fullscreen API 切换） */
+/** 全屏查看地图（优先全屏带 data-fullscreen-root 标记的容器，使覆盖层随地图一起全屏） */
 export function FullscreenControl() {
   const map = useMapInstance()
-  const container = map.getContainer()
+  const container =
+    (map.getContainer().closest('[data-fullscreen-root]') as HTMLElement | null) ??
+    map.getContainer()
   const [isFullscreen, setIsFullscreen] = useState(() => document.fullscreenElement === container)
 
   useEffect(() => {
