@@ -431,12 +431,14 @@ export function SplitsChart({ splits, height = 160 }: SplitsChartProps) {
         <div className="h-full shrink-0" style={{ width: SPEED_AXIS_W }}>
           <ComposedChart width={SPEED_AXIS_W} height={chartH} data={splits} margin={{ top: 8, right: 0, bottom: 0, left: 0 }}>
             {blankX}
-            {/* hide 的 Bar 仅用于激活轴域（无图形元素时轴不渲染，实测） */}
-            <Bar yAxisId="speed" dataKey="avg_speed_kmh" hide />
+            {/* 激活轴刻度：v3 中 hide 或缺失图形元素会让轴刻度整体不渲染（实测）；
+                绘图区宽度为 0，柱子实际不可见 */}
+            <Bar yAxisId="speed" dataKey="avg_speed_kmh" fill="transparent" />
             <YAxis
               yAxisId="speed"
               orientation="left"
               width={SPEED_AXIS_W}
+              interval={0}
               domain={speedDomain}
               ticks={speedTicks}
               tick={renderSpeedTick}
@@ -500,11 +502,12 @@ export function SplitsChart({ splits, height = 160 }: SplitsChartProps) {
         <div className="h-full shrink-0" style={{ width: PACE_AXIS_W }}>
           <ComposedChart width={PACE_AXIS_W} height={chartH} data={splits} margin={{ top: 8, right: 0, bottom: 0, left: 0 }}>
             {blankX}
-            <Line yAxisId="pace" dataKey="pace_s_per_km" hide />
+            <Line yAxisId="pace" dataKey="pace_s_per_km" stroke="none" dot={false} />
             <YAxis
               yAxisId="pace"
               orientation="right"
               width={PACE_AXIS_W}
+              interval={0}
               domain={paceDomain}
               ticks={paceTicks}
               tick={renderPaceTick}
