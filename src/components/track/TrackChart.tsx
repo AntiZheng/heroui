@@ -306,7 +306,7 @@ function fmtPaceTick(v: number): string {
 
 // 配速自定义刻度：与折线图同因绕过内置 Text 强制折行
 const renderPaceTick = ({ x, y, payload }: YAxisTickContentProps) => (
-  <text x={Number(x)} y={Number(y) + 3} textAnchor="end" fontSize={9} fill="var(--muted)">
+  <text x={Number(x)} y={Number(y) + 3} textAnchor="start" fontSize={9} fill="var(--muted)">
     {fmtPaceTick(Number(payload.value))}
   </text>
 )
@@ -323,6 +323,8 @@ const renderSpeedTick = ({ x, y, payload }: YAxisTickContentProps) => (
     {fmtY(Number(payload.value), 'km/h')}
   </text>
 )
+
+// 配速刻度：右轴外侧渲染（textAnchor=start，x 在刻度线右侧）
 
 // 分段悬浮提示（均速柱/配速线共用）
 const renderSplitTooltip = ({ active, payload }: { active?: boolean; payload?: readonly { payload?: unknown }[] }) => {
@@ -353,13 +355,18 @@ const renderSplitTooltip = ({ active, payload }: { active?: boolean; payload?: r
   )
 }
 
-// 分段过多时的最小格宽（px）：低于该宽度不再压缩柱子，改为容器横向滚动（隐藏滚动条）
+// 分段过多时的最小格宽（px）：低于该宽度不再压缩柱子，改为绘图区横向滚动（隐藏滚动条）
 const SPLITS_MIN_CELL = 26
 
 const PACE_LINE_COLOR = '#f59e0b' // 配速折线颜色（琥珀，与速度蓝色柱对比；与 SERIES_COLORS.pace 一致）
 
+// 左右纵轴固定不随绘图区横向滚动：拆成三个同高 ComposedChart 并排（左轴图 | 滚动绘图区 | 右轴图），
+// 两侧显式 domain+ticks 保证刻度与中间图逐像素对齐（hide 轴不占位、空白 XAxis 占高，均经 jsdom 实测）
+const SPEED_AXIS_W = 46
+const PACE_AXIS_W = 44
+
 export function SplitsChart({ splits, height = 160 }: SplitsChartProps) {
-  // 宽高均由父级（flex-1 容器）决定：超出容器宽时横向滚动
+  // 宽高均由父级（flex-1 容器）决定：绘图区超出容器宽时横向滚动
   const wrapRef = useRef<HTMLDivElement>(null)
   const [wrapW, setWrapW] = useState(0)
   const [wrapH, setWrapH] = useState(0)
@@ -393,85 +400,119 @@ export function SplitsChart({ splits, height = 160 }: SplitsChartProps) {
   const speeds = splits.map((s) => s.avg_speed_kmh).filter((v) => Number.isFinite(v))
   const minSpeed = speeds.length > 0 ? Math.min(...speeds) : 0
   const maxSpeed = speeds.length > 0 ? Math.max(...speeds) : 1
-  const chartW = Math.max(wrapW, splits.length * SPLITS_MIN_CELL)
-  const cell = chartW / Math.max(1, splits.length)
+  // 均速轴：0 起整数步长（刻度 0/step/2*step）
+  const speedStep = Math.max(1, Math.ceil((speeds.length ? Math.max(...speeds) : 1) / 2))
+  const speedDomain = [0, speedStep * 2] as [number, number]
+  const speedTicks = [0, speedStep, speedStep * 2]
+  // 配速轴：按 30s 取整（刻度中点必为整 30s，fmtPaceTick 输出整洁）
+  const paceVals = splits.map((s) => s.pace_s_per_km).filter((v): v is number => v != null && Number.isFinite(v))
+  const pLo0 = paceVals.length ? Math.min(...paceVals) : 0
+  const pHi0 = paceVals.length ? Math.max(...paceVals) : 60
+  const pPad = Math.max(15, (pHi0 - pLo0) * 0.15)
+  const paceLo = Math.max(0, Math.floor((pLo0 - pPad) / 30) * 30)
+  const paceHi = Math.ceil((pHi0 + pPad) / 30) * 30
+  const paceDomain = [paceLo, paceHi > paceLo ? paceHi : paceLo + 60] as [number, number]
+  const paceTicks = [paceDomain[0], (paceDomain[0] + paceDomain[1]) / 2, paceDomain[1]]
+
+  const centerW = Math.max(wrapW, splits.length * SPLITS_MIN_CELL)
+  const cell = centerW / Math.max(1, splits.length)
   const chartH = wrapH || height
+  // 侧轴图的空白 XAxis：只为占住与中间图相同的高度（hide 轴不占高，实测会让刻度上移错位）
+  const blankX = <XAxis dataKey="index" height={20} interval={0} tick={false} tickLine={false} axisLine={false} />
 
   if (splits.length === 0) {
     return <p className="py-8 text-center text-xs text-muted">暂无分段数据（需要时间信息）</p>
   }
 
   return (
-    // 外层 relative 承载悬浮提示；内层横向滚动并隐藏滚动条
+    // 外层 relative 承载悬浮提示；中间列横向滚动并隐藏滚动条，左右列固定
     <div className="absolute inset-0">
-      <div
-        ref={wrapRef}
-        className="h-full w-full overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      >
-        {/* 组合图：同横轴（公里），左纵轴=每公里均速（柱状，蓝），右纵轴=每公里配速（折线，琥珀，越高越慢） */}
-        <ComposedChart width={chartW} height={chartH} data={splits} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-          <CartesianGrid vertical={false} stroke="var(--separator)" />
-          <XAxis
-            dataKey="index"
-            interval={0}
-            height={20}
-            tick={{ fontSize: 9, fill: 'var(--muted)' }}
-            tickLine={false}
-            axisLine={false}
-            /* 格位过窄时隔一显示公里数，避免数字重叠 */
-            tickFormatter={(v: number) => (cell >= 11 || v % 2 === 1 ? String(v) : '')}
-          />
-          <YAxis
-            yAxisId="speed"
-            orientation="left"
-            width={46}
-            domain={[0, 'auto']}
-            tickCount={3}
-            tick={renderSpeedTick}
-            tickLine={false}
-            axisLine={false}
-          />
-          <YAxis
-            yAxisId="pace"
-            orientation="right"
-            width={44}
-            domain={['auto', 'auto']}
-            tickCount={3}
-            tick={renderPaceTick}
-            tickLine={false}
-            axisLine={false}
-          />
-          <Tooltip cursor={{ fill: 'var(--surface-secondary)' }} isAnimationActive={false} content={renderSplitTooltip} />
-          <Bar
-            yAxisId="speed"
-            dataKey="avg_speed_kmh"
-            radius={2}
-            isAnimationActive={false}
-            barSize={Math.max(2, Math.min(cell - 3, cell * 0.5))}
-          >
-            {splits.map((s) => (
-              <Cell
-                key={s.index}
-                fill="var(--accent)"
-                fillOpacity={
-                  s.avg_speed_kmh != null && Number.isFinite(s.avg_speed_kmh)
-                    ? speedOpacity(s.avg_speed_kmh, minSpeed, maxSpeed)
-                    : 0.35
-                }
-              />
-            ))}
-          </Bar>
-          <Line
-            yAxisId="pace"
-            dataKey="pace_s_per_km"
-            type="monotone"
-            stroke={PACE_LINE_COLOR}
-            strokeWidth={1.8}
-            dot={{ r: 2, fill: PACE_LINE_COLOR, strokeWidth: 0 }}
-            connectNulls={false}
-            isAnimationActive={false}
-          />
-        </ComposedChart>
+      <div className="flex h-full w-full">
+        <div className="h-full shrink-0" style={{ width: SPEED_AXIS_W }}>
+          <ComposedChart width={SPEED_AXIS_W} height={chartH} data={splits} margin={{ top: 8, right: 0, bottom: 0, left: 0 }}>
+            {blankX}
+            {/* hide 的 Bar 仅用于激活轴域（无图形元素时轴不渲染，实测） */}
+            <Bar yAxisId="speed" dataKey="avg_speed_kmh" hide />
+            <YAxis
+              yAxisId="speed"
+              orientation="left"
+              width={SPEED_AXIS_W}
+              domain={speedDomain}
+              ticks={speedTicks}
+              tick={renderSpeedTick}
+              tickLine={false}
+              axisLine={false}
+            />
+          </ComposedChart>
+        </div>
+        <div
+          ref={wrapRef}
+          className="h-full min-w-0 flex-1 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {/* 组合图：同横轴（公里），左轴=每公里均速（柱状，蓝），右轴=每公里配速（折线，琥珀，越高越慢） */}
+          <ComposedChart width={centerW} height={chartH} data={splits} margin={{ top: 8, right: 0, bottom: 0, left: 0 }}>
+            <CartesianGrid vertical={false} stroke="var(--separator)" />
+            <XAxis
+              dataKey="index"
+              interval={0}
+              height={20}
+              tick={{ fontSize: 9, fill: 'var(--muted)' }}
+              tickLine={false}
+              axisLine={false}
+              /* 格位过窄时隔一显示公里数，避免数字重叠 */
+              tickFormatter={(v: number) => (cell >= 11 || v % 2 === 1 ? String(v) : '')}
+            />
+            {/* 隐藏纵轴：仅承载域定义（hide 轴不占位，绘图区占满中间列） */}
+            <YAxis yAxisId="speed" width={SPEED_AXIS_W} hide domain={speedDomain} ticks={speedTicks} />
+            <YAxis yAxisId="pace" width={PACE_AXIS_W} hide domain={paceDomain} ticks={paceTicks} />
+            <Tooltip cursor={{ fill: 'var(--surface-secondary)' }} isAnimationActive={false} content={renderSplitTooltip} />
+            <Bar
+              yAxisId="speed"
+              dataKey="avg_speed_kmh"
+              radius={2}
+              isAnimationActive={false}
+              barSize={Math.max(2, Math.min(cell - 3, cell * 0.5))}
+            >
+              {splits.map((s) => (
+                <Cell
+                  key={s.index}
+                  fill="var(--accent)"
+                  fillOpacity={
+                    s.avg_speed_kmh != null && Number.isFinite(s.avg_speed_kmh)
+                      ? speedOpacity(s.avg_speed_kmh, minSpeed, maxSpeed)
+                      : 0.35
+                  }
+                />
+              ))}
+            </Bar>
+            <Line
+              yAxisId="pace"
+              dataKey="pace_s_per_km"
+              type="monotone"
+              stroke={PACE_LINE_COLOR}
+              strokeWidth={1.8}
+              dot={{ r: 2, fill: PACE_LINE_COLOR, strokeWidth: 0 }}
+              connectNulls={false}
+              isAnimationActive={false}
+            />
+          </ComposedChart>
+        </div>
+        <div className="h-full shrink-0" style={{ width: PACE_AXIS_W }}>
+          <ComposedChart width={PACE_AXIS_W} height={chartH} data={splits} margin={{ top: 8, right: 0, bottom: 0, left: 0 }}>
+            {blankX}
+            <Line yAxisId="pace" dataKey="pace_s_per_km" hide />
+            <YAxis
+              yAxisId="pace"
+              orientation="right"
+              width={PACE_AXIS_W}
+              domain={paceDomain}
+              ticks={paceTicks}
+              tick={renderPaceTick}
+              tickLine={false}
+              axisLine={false}
+            />
+          </ComposedChart>
+        </div>
       </div>
     </div>
   )
