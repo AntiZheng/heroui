@@ -4,11 +4,11 @@
 
 **Goal:** 轨迹上传后由后端异步完成 OSM 路段匹配（OpenFreeMap/OpenMapTiles 在线瓦片），带状态标识与自动恢复，完成后前端可查看逐路段分类信息。
 
-**Architecture:** 后端新增 `road_match` 服务（拉瓦片→解码→逐点最近道路→聚合分段），通过 APScheduler 内置 60s 周期任务自愈式消化待解析轨迹（status 0 待解析 / 1 解析中 / 2 完成 / 3 失败重试中）；结果（逐点 class + 聚合分段）写 `biz_track.road_segments` JSON 列。前端详情页按状态显示解析进度，完成后提供「速度着色/路段着色」切换 + 路段列表。
+**Architecture:** 后端新增 `road_match` 服务（拉瓦片→解码→逐点最近道路→聚合分段），通过 APScheduler 内置 60s 周期任务自愈式消化待解析轨迹（status 0 待解析 / 1 解析中 / 2 完成 / 3 失败重试中）。结果**全部落库**：逐点 class 汇总写 `biz_track.road_data` JSON（z/matched_pct/cls_by_point），聚合出的每个路段一行写入 `biz_track_road` 表（OSM 原始字段全量记录）。前端展示（任务 6-9）暂缓——用户 2026-11-09 指定先不做。
 
 **Tech Stack:** 后端 FastAPI + httpx + `mapbox-vector-tile`（pip 新增）+ APScheduler + Redis（瓦片缓存）；前端 MapLibre/AMap 双图层扩展 + HeroUI。
 
-**Spec:** 用户 2026-11-09 指定：① 先用在线瓦片，全部轨迹走 OSM（不做高德/国别分支）；② 上传时先同步完成现有统计，后端慢慢开启路段解析并标识状态；③ 解析失败自行恢复直到完成；④ 完成后才能查看路段信息；⑤ 路段分类使用 OSM 原始 class 字段，不做中国道路叫法映射。
+**Spec:** 用户 2026-11-09 指定：① 先用在线瓦片，全部轨迹走 OSM（不做高德/国别分支）；② 上传时先同步完成现有统计，后端慢慢开启路段解析并标识状态；③ 解析失败自行恢复直到完成；④ 完成后才能查看路段信息；⑤ 路段分类使用 OSM 原始 class 字段，不做中国道路叫法映射；⑥ **OSM 匹配出的道路信息全部记录进数据库（路段逐行落表）**。
 
 ## Global Constraints
 
@@ -19,47 +19,43 @@
 - 匹配参数（z13 瓦片、60m 匹配阈值、3×3 邻域兜底）沿用 2026-11-09 脚本验证结论（实测匹配率 94~95%）
 - 前端 chrome 字号 12px、软色 Chip 等按项目既有约定；验证 = `pnpm tsc --no-generate-tsbuildinfo && pnpm build`（以仓库实际脚本为准，至少 `tsc` + `vite build`）
 - 后端为独立仓库 `D:\Desktop\template_project\backend`（uv 项目，`uv run alembic upgrade head`）；提交用临时环境变量身份 `ichery <ichery@local>`，不动 git config
-- **前端仓库轨迹模块文件全部是用户未提交 WIP**——动手前先向用户确认是否先 checkpoint（仅限提醒，不代为提交）
+- 前端仓库轨迹模块 WIP 已于 2026-11-09 全部提交（4a6e6da + 4 个语义提交）；前端任务暂缓，本计划只动后端仓库
 - 后端 dev server 由用户手动重启；本计划中的"重启后端"步骤只交接命令不代跑
 
-## 数据契约（前后端共同依赖）
+## 数据契约（数据库存储版）
 
 `biz_track` 新增列（alembic 004）：
 - `road_status VARCHAR(1) NOT NULL DEFAULT '0'` — 0 待解析 / 1 解析中 / 2 完成 / 3 失败待重试
 - `road_retry INT NOT NULL DEFAULT 0` — 失败重试次数（观测用，不设上限，周期任务持续自恢复）
-- `road_segments JSON NULL` — 完成后写入
+- `road_matched_pct DOUBLE NULL` — 匹配率（%）
+- `road_data JSON NULL` — 完成后写入 `{"z": 13, "cls_by_point": ["primary", null, …]}`（逐点 class 与 geojson 坐标下标对齐，null=未匹配）
 
-`road_segments` JSON 结构：
-```json
-{
-  "z": 13,
-  "matched_pct": 94.3,
-  "cls_by_point": ["primary", "primary", null],
-  "segments": [
-    {"s": 0, "e": 45, "dist_s": 0, "dist_e": 620.5,
-     "cls": "trunk", "name": "九华北路", "brunnel": null, "avg_spd": 44.2}
-  ]
-}
-```
-- `cls_by_point[i]` 与 geojson 坐标按下标对齐，`null`=未匹配（地图渲染用）
-- `segments[].s/e` 为点下标区间（左闭右开），`dist_s/e` 来自 `meta.dist_m`，`avg_spd` 来自 `meta.speed_kmh`（无速度数据为 null）
-- `brunnel` 取区间内出现过的 bridge/tunnel/ford（无则 null）
+新表 `biz_track_road`（每个匹配路段一行，OSM 查出的道路信息全量记录）：
+- `road_id INT PK AUTO_INCREMENT`、`track_id INT`（索引）、`seq INT`（路段序号，按里程递增）
+- `idx_s INT` / `idx_e INT` — geojson 点下标区间 [s, e)
+- `dist_s DOUBLE` / `dist_e DOUBLE` — 里程区间（米，来自 meta.dist_m）
+- `cls VARCHAR(20)` — OSM 原始 class（motorway/trunk/primary/…，**不映射**）
+- `subclass VARCHAR(20) NULL`、`surface VARCHAR(30) NULL`、`brunnel VARCHAR(10) NULL`（bridge/tunnel/ford）
+- `toll SMALLINT NULL`、`expressway SMALLINT NULL` — 瓦片原始 0/1 标志（expressway=中国高速标志）
+- `name VARCHAR(255) NULL`、`ref VARCHAR(50) NULL`、`network VARCHAR(20) NULL` — transportation_name 图层原始字段
+- `avg_spd DOUBLE NULL` — 区间均速 km/h（轨迹无速度数据为 NULL）
 
 ---
 
-### Task 1: 后端——alembic 004 迁移 + 模型字段
+### Task 1: 后端——alembic 004 迁移（列 + 新表）+ 模型
 
 **Files:**
 - Create: `D:\Desktop\template_project\backend\alembic\versions\004_track_road.py`
 - Modify: `D:\Desktop\template_project\backend\app\models\track.py`
+- Modify: `D:\Desktop\template_project\backend\app\models\__init__.py`
 
 **Interfaces:**
-- Produces: `BizTrack.road_status: str`、`BizTrack.road_retry: int`、`BizTrack.road_segments: dict | None`（后续所有任务依赖）
+- Produces: `BizTrack.road_status/road_retry/road_matched_pct/road_data`；`BizTrackRoad`（track_id/seq/idx_s/idx_e/dist_s/dist_e/cls/subclass/surface/brunnel/toll/expressway/name/ref/network/avg_spd，后续所有任务依赖）
 
 - [ ] **Step 1: 写迁移 004**
 
 ```python
-"""track road segments columns
+"""track road columns + road segment table
 
 Revision ID: 004
 Revises: 003
@@ -79,16 +75,41 @@ def upgrade() -> None:
                                          server_default="0", comment="路段解析状态(0待解析 1解析中 2完成 3失败待重试)"))
     op.add_column("biz_track", sa.Column("road_retry", sa.Integer(), nullable=False,
                                          server_default="0", comment="路段解析失败重试次数"))
-    op.add_column("biz_track", sa.Column("road_segments", sa.JSON(), comment="OSM 路段匹配结果"))
+    op.add_column("biz_track", sa.Column("road_matched_pct", sa.Double(), comment="OSM 匹配率(%)"))
+    op.add_column("biz_track", sa.Column("road_data", sa.JSON(), comment="逐点 class 汇总 {z, cls_by_point}"))
+    op.create_table(
+        "biz_track_road",
+        sa.Column("road_id", sa.Integer(), primary_key=True, autoincrement=True, comment="路段ID"),
+        sa.Column("track_id", sa.Integer(), nullable=False, comment="轨迹ID(biz_track)"),
+        sa.Column("seq", sa.Integer(), nullable=False, comment="路段序号(按里程递增)"),
+        sa.Column("idx_s", sa.Integer(), nullable=False, comment="geojson 点下标区间起点(闭)"),
+        sa.Column("idx_e", sa.Integer(), nullable=False, comment="geojson 点下标区间终点(开)"),
+        sa.Column("dist_s", sa.Double(), default=0, comment="起始里程(米)"),
+        sa.Column("dist_e", sa.Double(), default=0, comment="结束里程(米)"),
+        sa.Column("cls", sa.String(20), nullable=False, comment="OSM 原始 class(motorway/trunk/…不映射)"),
+        sa.Column("subclass", sa.String(20), comment="OSM subclass"),
+        sa.Column("surface", sa.String(30), comment="OSM surface"),
+        sa.Column("brunnel", sa.String(10), comment="bridge/tunnel/ford"),
+        sa.Column("toll", sa.SmallInteger(), comment="收费标志(0/1)"),
+        sa.Column("expressway", sa.SmallInteger(), comment="中国高速标志(0/1)"),
+        sa.Column("name", sa.String(255), comment="道路名称"),
+        sa.Column("ref", sa.String(50), comment="道路编号(G205 等)"),
+        sa.Column("network", sa.String(20), comment="路网编号来源(national/provincial 等)"),
+        sa.Column("avg_spd", sa.Double(), comment="区间均速(km/h)"),
+        comment="轨迹路段解析结果表(OSM 原始字段全量)",
+    )
+    op.create_index("idx_biz_track_road_track_id", "biz_track_road", ["track_id"])
 
 
 def downgrade() -> None:
-    op.drop_column("biz_track", "road_segments")
+    op.drop_table("biz_track_road")
+    op.drop_column("biz_track", "road_data")
+    op.drop_column("biz_track", "road_matched_pct")
     op.drop_column("biz_track", "road_retry")
     op.drop_column("biz_track", "road_status")
 ```
 
-- [ ] **Step 2: 模型补字段**
+- [ ] **Step 2: 模型补字段 + 新表模型**
 
 `app/models/track.py` 的 `geojson` 字段后追加：
 
@@ -96,26 +117,56 @@ def downgrade() -> None:
     # ── OSM 路段匹配（异步解析，见 services/road_match.py） ──
     road_status: str = Field(default="0", max_length=1, description="路段解析状态(0待解析 1解析中 2完成 3失败待重试)")
     road_retry: int = Field(default=0, description="路段解析失败重试次数")
-    road_segments: dict | None = Field(default=None, sa_column=Column(JSON), description="OSM 路段匹配结果")
+    road_matched_pct: float | None = Field(default=None, description="OSM 匹配率(%)")
+    road_data: dict | None = Field(default=None, sa_column=Column(JSON), description="逐点 class 汇总 {z, cls_by_point}")
 ```
+
+同文件追加路段表模型（列名与迁移一致，字段说明见迁移注释）：
+
+```python
+class BizTrackRoad(SQLModel, table=True):
+    """轨迹路段解析结果（OSM 原始字段全量，每匹配路段一行）"""
+
+    __tablename__ = "biz_track_road"
+
+    road_id: int | None = Field(default=None, primary_key=True)
+    track_id: int = Field(index=True, description="轨迹ID(biz_track)")
+    seq: int = Field(description="路段序号(按里程递增)")
+    idx_s: int = Field(description="geojson 点下标区间起点(闭)")
+    idx_e: int = Field(description="geojson 点下标区间终点(开)")
+    dist_s: float = Field(default=0, description="起始里程(米)")
+    dist_e: float = Field(default=0, description="结束里程(米)")
+    cls: str = Field(max_length=20, description="OSM 原始 class")
+    subclass: str | None = Field(default=None, max_length=20)
+    surface: str | None = Field(default=None, max_length=30)
+    brunnel: str | None = Field(default=None, max_length=10)
+    toll: int | None = None
+    expressway: int | None = None
+    name: str | None = Field(default=None, max_length=255)
+    ref: str | None = Field(default=None, max_length=50)
+    network: str | None = Field(default=None, max_length=20)
+    avg_spd: float | None = Field(default=None, description="区间均速(km/h)")
+```
+
+`app/models/__init__.py` 导出 `BizTrackRoad`（与 BizTrack 同款写法）。
 
 - [ ] **Step 3: 执行迁移并核对**
 
 ```bash
 cd D:\Desktop\template_project\backend
 uv run alembic upgrade head
-uv run python -c "import asyncio,os,sys; asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy()); sys.path.insert(0,'.'); import asyncmy; from app.core.config import DataBaseConfig; c=DataBaseConfig(); exec('''async def m():\n conn=await asyncmy.connect(host=c.host,port=c.port,user=c.username,password=c.password,db=c.database); cur=await conn.cursor(); await cur.execute('SHOW COLUMNS FROM biz_track'); [print(r[0]) for r in await cur.fetchall()]; conn.close()\nasyncio.run(m())''')"
+uv run python -c "import asyncio,os,sys; asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy()); sys.path.insert(0,'.'); import asyncmy; from app.core.config import DataBaseConfig; c=DataBaseConfig(); exec('''async def m():\n conn=await asyncmy.connect(host=c.host,port=c.port,user=c.username,password=c.password,db=c.database); cur=await conn.cursor(); await cur.execute('SHOW COLUMNS FROM biz_track'); [print(r[0]) for r in await cur.fetchall()]; await cur.execute('SHOW COLUMNS FROM biz_track_road'); [print(r[0]) for r in await cur.fetchall()]; conn.close()\nasyncio.run(m())''')"
 ```
 
-Expected: 输出含 `road_status / road_retry / road_segments`
+Expected: biz_track 输出含 `road_status / road_retry / road_matched_pct / road_data`；biz_track_road 全列在
 
 - [ ] **Step 4: Commit（后端仓库）**
 
 ```bash
 cd D:\Desktop\template_project\backend
 export GIT_AUTHOR_NAME=ichery GIT_AUTHOR_EMAIL=ichery@local GIT_COMMITTER_NAME=ichery GIT_COMMITTER_EMAIL=ichery@local
-git add alembic/versions/004_track_road.py app/models/track.py
-git commit -m "feat: biz_track 增加路段解析状态与结果列"
+git add alembic/versions/004_track_road.py app/models/track.py app/models/__init__.py
+git commit -m "feat: biz_track 路段解析状态列 + biz_track_road 路段结果表"
 ```
 
 ---
@@ -130,7 +181,9 @@ git commit -m "feat: biz_track 增加路段解析状态与结果列"
 - Produces（后续任务调用）:
   - `lng_to_tx(lng: float, z: int) -> int` / `lat_to_ty(lat: float, z: int) -> int`
   - `dist_to_line_m(px, py, ax, ay, bx, by) -> float`
-  - `aggregate(points: list[tuple[float, float]], cls_by_point: list[str | None], names: list[str | None], brunnels: list[str | None], speeds: list[float | None], dists: list[float]) -> dict`（返回上文的 road_segments dict，不含 z/matched_pct，由调用方补）
+  - `aggregate(points, cls_by_point, props, speeds, dists) -> dict`：
+    - `props: list[dict]`，`props[i]` = 第 i 点匹配到的 OSM 字段（`name/ref/network/subclass/surface/toll/brunnel/expressway`，未匹配为 `{}`）
+    - 返回完整契约 dict：`{"z", "matched_pct", "cls_by_point", "segments"}`；segments 元素 = `{s, e, dist_s, dist_e, cls, name, ref, network, subclass, surface, brunnel, toll, expressway, avg_spd}`（OSM 字段取区间内首个非空值）
 
 - [ ] **Step 1: 写失败测试**
 
@@ -141,9 +194,9 @@ from app.services.road_match import aggregate, dist_to_line_m, lat_to_ty, lng_to
 
 
 def test_tile_index_beijing():
-    # 北京 (116.391, 39.907) @z13 → x=6753, y=3106（OSM 标准瓦片编号）
-    assert lng_to_tx(116.391, 13) == 6753
-    assert lat_to_ty(39.907, 13) == 3106
+    # 北京 (116.391, 39.907) @z13 → x=6744, y=3104（OSM slippy map 标准瓦片编号）
+    assert lng_to_tx(116.391, 13) == 6744
+    assert lat_to_ty(39.907, 13) == 3104
 
 
 def test_dist_to_line_m():
@@ -156,24 +209,28 @@ def test_dist_to_line_m():
 
 
 def test_aggregate_merges_same_key_across_gaps():
-    # 4 个点: primary / gap / primary → 聚合为 1 段（同 key 跨未匹配间隙合并）
+    # 5 个点: primary / gap / primary → 聚合为 1 段（同 key 跨未匹配间隙合并）
     pts = [(0.0, 0.0), (0.001, 0.0), (0.002, 0.0), (0.003, 0.0), (0.004, 0.0)]
     cls = ["primary", None, None, "primary", "primary"]
-    names = ["九华北路", None, None, "九华北路", "九华北路"]
-    out = aggregate(pts, cls, names, [None] * 5, [None] * 5, [i * 100 for i in range(5)])
+    props = [{"name": "九华北路", "ref": "G205"}, {}, {},
+             {"name": "九华北路", "ref": "G205"}, {"name": "九华北路"}]
+    out = aggregate(pts, cls, props, [None] * 5, [i * 100 for i in range(5)])
     assert len(out["segments"]) == 1
     seg = out["segments"][0]
     assert seg["cls"] == "primary" and seg["s"] == 0 and seg["e"] == 5
+    assert seg["name"] == "九华北路" and seg["ref"] == "G205"  # OSM 字段取区间首个非空
     assert seg["dist_s"] == 0 and seg["dist_e"] == 400
     assert out["cls_by_point"] == cls
+    assert out["z"] == 13
 
 
 def test_aggregate_separate_classes():
     cls = ["primary", "primary", "trunk", "trunk"]
-    names = ["A路", "A路", "B路", "B路"]
+    props = [{"name": "A路"}, {"name": "A路"}, {"name": "B路", "toll": 1}, {"name": "B路"}]
     pts = [(0.0, 0.0), (0.001, 0.0), (0.002, 0.0), (0.003, 0.0)]
-    out = aggregate(pts, cls, names, [None] * 4, [None] * 4, [0, 100, 200, 300])
+    out = aggregate(pts, cls, props, [None] * 4, [0, 100, 200, 300])
     assert [s["cls"] for s in out["segments"]] == ["primary", "trunk"]
+    assert out["segments"][1]["toll"] == 1
     assert out["matched_pct"] == 100.0
 ```
 
@@ -221,33 +278,31 @@ def dist_to_line_m(px, py, ax, ay, bx, by) -> float:
     return math.hypot(vx - t * wx, vy - t * wy)
 
 
-def aggregate(points, cls_by_point, names, brunnels, speeds, dists) -> dict:
+def aggregate(points, cls_by_point, props, speeds, dists) -> dict:
+    """逐点匹配结果 → 契约 dict。props[i] 为该点 OSM 字段 dict（未匹配={}）"""
     n = len(points)
-    # 相邻同名同 class 归并为 key 组（含 gap 断组），再把同 key 组跨 gap 合并
-    runs: list[tuple[int, int, str, str | None]] = []  # (s, e, cls, name)
+    # 相邻同 (cls, name) 归并为组（含 gap 断组），再把同 key 组跨 gap 合并
+    runs: list[tuple[int, int, str]] = []  # (s, e, cls)
     s = 0
     for i in range(1, n + 1):
-        if i == n or (cls_by_point[i], names[i]) != (cls_by_point[s], names[s]):
+        if i == n or (cls_by_point[i], props[i].get("name")) != (cls_by_point[s], props[s].get("name")):
             if cls_by_point[s] is not None:
-                runs.append((s, i, cls_by_point[s], names[s]))
+                runs.append((s, i, cls_by_point[s]))
             s = i
     merged: list[list] = []
     for r in runs:
-        if merged and merged[-1][2] == r[2] and merged[-1][3] == r[3]:
+        if merged and merged[-1][2] == r[2] and props[merged[-1][0]].get("name") == props[r[0]].get("name"):
             merged[-1][1] = r[1]
         else:
             merged.append(list(r))
     segments = []
-    for s_, e_, cls, name in merged:
-        brunn = [b for b in brunnels[s_:e_] if b]
+    for s_, e_, cls in merged:
+        seg = {"s": s_, "e": e_, "dist_s": dists[s_], "dist_e": dists[e_ - 1], "cls": cls}
+        for key in ("name", "ref", "network", "subclass", "surface", "brunnel", "toll", "expressway"):
+            seg[key] = next((props[i][key] for i in range(s_, e_) if props[i].get(key) is not None), None)
         seg_speeds = [v for v in speeds[s_:e_] if v is not None]
-        segments.append({
-            "s": s_, "e": e_,
-            "dist_s": dists[s_], "dist_e": dists[e_ - 1],
-            "cls": cls, "name": name,
-            "brunnel": brunn[0] if brunn else None,
-            "avg_spd": round(sum(seg_speeds) / len(seg_speeds), 1) if seg_speeds else None,
-        })
+        seg["avg_spd"] = round(sum(seg_speeds) / len(seg_speeds), 1) if seg_speeds else None
+        segments.append(seg)
     matched = sum(1 for c in cls_by_point if c is not None)
     return {
         "z": Z,
@@ -282,7 +337,7 @@ git commit -m "feat: OSM 路段匹配纯函数（瓦片数学/距离/分段聚�
 
 **Interfaces:**
 - Consumes: Task 2 的纯函数
-- Produces: `async def match_track(geojson: dict) -> dict`（输入 TrackGeoJSON，输出 road_segments dict，含 z/matched_pct/cls_by_point/segments）
+- Produces: `async def match_track(geojson: dict) -> dict`（输入 TrackGeoJSON，输出完整契约 dict：z/matched_pct/cls_by_point/segments，segments 元素含全部 OSM 字段，见数据契约）
 
 - [ ] **Step 1: 加依赖并锁定**
 
@@ -376,19 +431,23 @@ async def _roads_of_tiles(tiles: set[tuple[int, int]]) -> tuple[list[dict], list
         for feat in decoded.get("transportation", {}).get("features", []):
             props = feat["properties"]
             if props.get("class"):
-                roads.append({"cls": props["class"], "sub": props.get("subclass"),
-                              "brunnel": props.get("brunnel"), "geom": feat["geometry"]})
+                roads.append({"cls": props["class"], "subclass": props.get("subclass"),
+                              "surface": props.get("surface"), "brunnel": props.get("brunnel"),
+                              "toll": props.get("toll"), "expressway": props.get("expressway"),
+                              "geom": feat["geometry"]})
         for feat in decoded.get("transportation_name", {}).get("features", []):
-            if feat["properties"].get("name"):
-                names.append({"name": feat["properties"]["name"], "geom": feat["geometry"]})
+            p = feat["properties"]
+            if p.get("name") or p.get("ref"):
+                names.append({"name": p.get("name"), "ref": p.get("ref"),
+                              "network": p.get("network"), "geom": feat["geometry"]})
 
     await asyncio.gather(*(one(t) for t in tiles))
     await client.aclose()
     return roads, names
 
 
-def _nearest(roads: list[dict], lng: float, lat: float) -> tuple[float, dict | None]:
-    best_d, best_f = MATCH_M + 1, None
+def _nearest(roads: list[dict], lng: float, lat: float, limit: float = MATCH_M) -> tuple[float, dict | None]:
+    best_d, best_f = limit + 1, None
     for f in roads:
         coords = f["geom"]["coordinates"]
         lines = coords[0] if f["geom"]["type"] == "MultiLineString" else [coords]
@@ -429,22 +488,24 @@ async def match_track(geojson: dict) -> dict:
                 for f in buckets.get((tx + dx, ty + dy), [])]
 
     cls_by_point: list[str | None] = []
-    names_p: list[str | None] = []
-    brunnels: list[str | None] = []
+    props: list[dict] = []
     for lng, lat in points:
         d, f = _nearest(road_buckets.get((lng_to_tx(lng, Z), lat_to_ty(lat, Z)), []), lng, lat)
         if d > MATCH_M:  # 瓦片边缘兜底
             d, f = _nearest(pool_3x3(road_buckets, lng, lat), lng, lat)
         if d > MATCH_M or f is None:
-            cls_by_point.append(None); names_p.append(None); brunnels.append(None)
+            cls_by_point.append(None)
+            props.append({})
             continue
-        cls_by_point.append(f["cls"]); brunnels.append(f.get("brunnel"))
-        _, nf = _nearest(name_buckets.get((lng_to_tx(lng, Z), lat_to_ty(lat, Z)), []), lng, lat)
-        if (nf is None or _nearest(name_buckets.get((lng_to_tx(lng, Z), lat_to_ty(lat, Z)), []), lng, lat)[0] > 80):
-            _, nf = _nearest(pool_3x3(name_buckets, lng, lat), lng, lat)
-        names_p.append(nf["name"] if nf else None)
+        cls_by_point.append(f["cls"])
+        # 路名/编号图层 80m 内取最近（先本瓦片桶，再 3×3 邻域兜底）
+        _, nf = _nearest(name_buckets.get((lng_to_tx(lng, Z), lat_to_ty(lat, Z)), []), lng, lat, 80.0)
+        if nf is None:
+            _, nf = _nearest(pool_3x3(name_buckets, lng, lat), lng, lat, 80.0)
+        props.append({**{k: f.get(k) for k in ("subclass", "surface", "brunnel", "toll", "expressway")},
+                      **({"name": nf["name"], "ref": nf["ref"], "network": nf["network"]} if nf else {})})
 
-    return aggregate(points, cls_by_point, names_p, brunnels, speeds, dists)
+    return aggregate(points, cls_by_point, props, speeds, dists)
 ```
 
 注意：`mvt.decode` 的位置参数签名以 Step 2 探测结果为准（版本间可能是 `decode(buf, geojson=True)` 关键字形式），实现时按探测脚本实际可用的调用方式写死。
@@ -497,17 +558,17 @@ git commit -m "feat: OSM 瓦片拉取与逐点路段匹配管道（Redis 瓦片�
 
 **Interfaces:**
 - Consumes: `match_track(geojson) -> dict`（Task 3）、`BizTrack.road_status/road_retry/road_segments`（Task 1）
-- Produces: 注册任务名 `trackRoadParse`；行为=每 60s 扫 `road_status IN ('0','3') AND del_flag='0'` 最多 3 条：置 '1' → 匹配 → 成功置 '2' + 写 road_segments、road_retry=0；异常置 '3'、road_retry+1（下次周期继续重试，即"自行恢复直到完成"）
+- Produces: 注册任务名 `trackRoadParse`；行为=每 60s 扫 `road_status IN ('0','3') AND del_flag='0'` 最多 3 条：置 '1' → 匹配 → 成功置 '2' + 路段逐行落 `biz_track_road`（先清旧行再插，幂等）+ 写 road_matched_pct/road_data、road_retry=0；异常置 '3'、road_retry+1（下次周期继续重试，即"自行恢复直到完成"）
 
 - [ ] **Step 1: 实现 tick 任务**
 
 ```python
 """轨迹路段解析自愈任务：每分钟消化待解析/失败轨迹，失败自动重试直到完成"""
 from loguru import logger
-from sqlalchemy import select, update
+from sqlalchemy import delete, select
 
 from app.core.database import async_session
-from app.models.track import BizTrack
+from app.models.track import BizTrack, BizTrackRoad
 from app.services.road_match import match_track
 from app.tasks.scheduler import register_task
 
@@ -536,11 +597,23 @@ async def parse_one(track_id: int) -> None:
         await db.commit()
         try:
             result = await match_track(track.geojson)
-            track.road_segments = result
+            # 路段逐行落库（重解析幂等：先清旧行）
+            await db.execute(delete(BizTrackRoad).where(BizTrackRoad.track_id == track_id))
+            for seq, seg in enumerate(result["segments"]):
+                db.add(BizTrackRoad(track_id=track_id, seq=seq,
+                                    idx_s=seg["s"], idx_e=seg["e"],
+                                    dist_s=seg["dist_s"], dist_e=seg["dist_e"],
+                                    cls=seg["cls"], name=seg.get("name"),
+                                    ref=seg.get("ref"), network=seg.get("network"),
+                                    subclass=seg.get("subclass"), surface=seg.get("surface"),
+                                    brunnel=seg.get("brunnel"), toll=seg.get("toll"),
+                                    expressway=seg.get("expressway"), avg_spd=seg.get("avg_spd")))
+            track.road_matched_pct = result["matched_pct"]
+            track.road_data = {"z": result["z"], "cls_by_point": result["cls_by_point"]}
             track.road_status = "2"
             track.road_retry = 0
             logger.info(f"trackRoadParse: 轨迹 {track_id} 解析完成，"
-                        f"匹配率 {result['matched_pct']}%，{len(result['segments'])} 段")
+                        f"匹配率 {result['matched_pct']}%，{len(result['segments'])} 段已落库")
         except Exception as e:  # noqa: BLE001
             track.road_status = "3"
             track.road_retry += 1
@@ -575,6 +648,8 @@ git commit -m "feat: 轨迹路段解析周期任务（60s 自愈，失败自动�
 
 ### Task 5: 后端——端到端验证（存量轨迹 9/10 自动解析）
 
+> 前端展示暂缓：本任务验证到"数据落库 + 详情接口带出新字段"为止；任务 6-9（前端着色/面板）待用户点名再做。
+
 - [ ] **Step 1: 交接用户重启后端**（dev server 由用户手动重启）
 
 ```bash
@@ -594,27 +669,54 @@ c = DataBaseConfig()
 async def m():
     conn = await asyncmy.connect(host=c.host, port=c.port, user=c.username, password=c.password, db=c.database)
     cur = await conn.cursor()
-    await cur.execute('SELECT track_id, road_status, road_retry, JSON_LENGTH(road_segments, \"$.segments\") FROM biz_track')
+    await cur.execute('SELECT t.track_id, t.road_status, t.road_retry, t.road_matched_pct, '
+                      'COUNT(r.road_id) FROM biz_track t LEFT JOIN biz_track_road r '
+                      'ON r.track_id = t.track_id GROUP BY t.track_id')
     [print(r) for r in await cur.fetchall()]
     conn.close()
 asyncio.run(m())
 "
 ```
 
-Expected: track 9/10 的 road_status 先 '1' 后 '2'，segments 数 > 0。若为 '3'，看后端日志 road_retry 递增并排查（OpenFreeMap 国内偶发不可达即自恢复场景，多等几轮）。
+Expected: track 9/10 的 road_status 先 '1' 后 '2'，匹配率 ≈94，落表路段数 > 0。若为 '3'，看后端日志 road_retry 递增并排查（OpenFreeMap 国内偶发不可达即自恢复场景，多等几轮）。
 
-- [ ] **Step 3: curl 验证详情接口带出新字段**
+- [ ] **Step 3: 抽查落表路段内容（道路信息全量核对）**
+
+```bash
+cd D:\Desktop\template_project\backend && uv run python -c "
+import asyncio, sys
+asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+sys.path.insert(0, '.')
+import asyncmy
+from app.core.config import DataBaseConfig
+c = DataBaseConfig()
+async def m():
+    conn = await asyncmy.connect(host=c.host, port=c.port, user=c.username, password=c.password, db=c.database)
+    cur = await conn.cursor()
+    await cur.execute('SELECT seq, cls, name, ref, network, brunnel, surface, toll, expressway, '
+                      'ROUND(dist_e-dist_s) FROM biz_track_road WHERE track_id=9 ORDER BY seq LIMIT 10')
+    [print(r) for r in await cur.fetchall()]
+    conn.close()
+asyncio.run(m())
+"
+```
+
+Expected: 首行 trunk/九华北路，OSM 原始字段有值即视为"道路信息全部落库"达成。
+
+- [ ] **Step 4: curl 验证详情接口带出新字段**
 
 ```bash
 # 用前端登录态 token，或任一已登录会话：
-curl -s http://127.0.0.1:9099/dev-api/track/9 -H "Authorization: Bearer <token>" | python -c "import json,sys; d=json.load(sys.stdin)['data']; print(d['road_status'], d['road_segments']['matched_pct'], len(d['road_segments']['segments']))"
+curl -s http://127.0.0.1:9099/dev-api/track/9 -H "Authorization: Bearer <token>" | python -c "import json,sys; d=json.load(sys.stdin)['data']; print(d['road_status'], d['road_matched_pct'], len(d['road_data']['cls_by_point']))"
 ```
 
-Expected: `2 94.x >0`
+Expected: `2 94.x <点数>`（路段明细查表接口属前端展示范畴，随任务 6-9 一并做）
 
 ---
 
-### Task 6: 前端——类型 + 路段配色 + 路段列表面板组件
+### Task 6: 前端——类型 + 路段配色 + 路段列表面板组件【暂缓，待用户点名】
+
+> 用户 2026-11-09 指定前端如何显示先不做。以下任务保留待执行；数据契约已改为 road_data JSON + biz_track_road 表，届时后端需先补"按 track_id 查路段明细"接口。
 
 **Files:**
 - Modify: `D:\Desktop\heroUI\src\types\track.ts`

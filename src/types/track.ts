@@ -101,6 +101,9 @@ export interface TrackRow extends TrackMetrics {
   file_name?: string | null
   start_time?: string | null
   end_time?: string | null
+  // OSM 路段解析状态（异步任务回写，见后端 road_parse）
+  road_status?: '0' | '1' | '2' | '3' | null
+  road_matched_pct?: number | null
   remark?: string | null
   create_by?: string | null
   create_time?: string | null
