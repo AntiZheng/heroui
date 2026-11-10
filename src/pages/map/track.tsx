@@ -14,6 +14,10 @@ import {
   EmptyState,
   Input,
   Label,
+  ProgressBar,
+  ProgressBarFill,
+  ProgressBarOutput,
+  ProgressBarTrack,
   SearchField,
   Spinner,
   TableBody,
@@ -78,6 +82,7 @@ const PAGE_SIZE = 10
 const TRACK_COLUMNS = [
   { key: 'track_name', label: '轨迹名称' },
   { key: 'track_type', label: '格式' },
+  { key: 'road_status', label: '轨迹解析' },
   { key: 'distance_m', label: '总里程' },
   { key: 'duration_s', label: '总时长' },
   { key: 'avg_speed_kmh', label: '平均速度' },
@@ -258,7 +263,7 @@ function TrackDetailView({ row, onBack }: DetailProps) {
   const [splitsView, setSplitsView] = useState<'chart' | 'table'>('chart')
   const [hoverIndex, setHoverIndex] = useState<number | null>(null)
   const [xKind, setXKind] = useState<'time' | 'distance'>('time')
-  const [metric, setMetric] = useState<'speed' | 'pace' | 'ele' | 'cumdist'>('speed')
+  const [metric, setMetric] = useState<'speed' | 'ele' | 'cumdist'>('speed')
   const [panelOpen, setPanelOpen] = useState(false)
   const viewportRef = useRef<Viewport>({ center: [104.2, 35.9], zoom: 4, pitch: 0 })
 
@@ -296,7 +301,7 @@ function TrackDetailView({ row, onBack }: DetailProps) {
   const metricTabs = useMemo(() => {
     const tabs: { key: typeof metric; label: string; enabled: boolean }[] = [
       { key: 'speed', label: '速度', enabled: dims.speed },
-      { key: 'pace', label: '配速', enabled: dims.speed },
+      // 配速是"每公里"统计，在右侧每公里分段面板展示，不作为左侧曲线指标
       { key: 'ele', label: '海拔', enabled: dims.ele },
       { key: 'cumdist', label: '累计里程', enabled: points.length > 1 },
     ]
@@ -311,15 +316,11 @@ function TrackDetailView({ row, onBack }: DetailProps) {
     if (curMetric === 'speed') {
       return [{ key: 'speed', label: '速度', color: SERIES_COLORS.speed, unit: 'km/h', values: s.speeds ?? [] }]
     }
-    if (curMetric === 'pace') {
-      // 配速 = 3600/速度(km/h) 秒/公里；速度过低（停靠）不绘制
-      const values = (s.speeds ?? []).map((v) => (v != null && v >= 0.5 ? 3600 / v : null))
-      return [{ key: 'pace', label: '配速', color: SERIES_COLORS.pace, unit: 'min/km', values }]
-    }
     if (curMetric === 'ele') {
       return [{ key: 'ele', label: '海拔', color: SERIES_COLORS.ele, unit: 'm', values: s.eles ?? [] }]
     }
-    return [{ key: 'cumdist', label: '累计里程', color: SERIES_COLORS.cumdist, unit: 'm', values: s.dists }]
+    // 累计里程以 km 展示（与总里程卡片一致），图表数据同步换算
+    return [{ key: 'cumdist', label: '累计里程', color: SERIES_COLORS.cumdist, unit: 'km', values: s.dists.map((v) => (v == null ? null : v / 1000)) }]
   }, [analysis, curMetric])
 
   if (isPending) {
@@ -477,7 +478,11 @@ function TrackDetailView({ row, onBack }: DetailProps) {
                           key={t.key}
                           type="button"
                           disabled={!t.enabled}
-                          onClick={() => setMetric(t.key)}
+                          onClick={() => {
+                            setMetric(t.key)
+                            // 累计里程对距离轴是恒等直线无统计意义：切累计里程时强制按时间
+                            if (t.key === 'cumdist') setXKind('time')
+                          }}
                           className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
                             curMetric === t.key ? 'bg-accent-soft text-accent-soft-foreground' : 'text-muted/75 hover:text-foreground'
                           }`}
@@ -491,8 +496,9 @@ function TrackDetailView({ row, onBack }: DetailProps) {
                             <button
                               key={key}
                               type="button"
+                              disabled={curMetric === 'cumdist' && key === 'distance'}
                               onClick={() => setXKind(key)}
-                              className={`rounded px-2 py-0.5 text-[11px] ${
+                              className={`rounded px-2 py-0.5 text-[11px] disabled:cursor-not-allowed disabled:opacity-40 ${
                                 effectiveXKind === key ? 'bg-accent-soft text-accent-soft-foreground' : 'text-muted'
                               }`}
                             >
@@ -640,6 +646,9 @@ export default function TrackPage() {
     queryKey: ['track-list', query],
     queryFn: () => getTrackList(query),
     placeholderData: keepPreviousData,
+    // 路段解析是后台异步任务：还有待解析/解析中/失败重试的轨迹时轮询刷新状态列
+    refetchInterval: (q) =>
+      q.state.data?.rows.some((r) => r.road_status !== '2') ? 10_000 : false,
   })
   const rows = useMemo(() => data?.rows ?? [], [data])
   const pageSize = query.pageSize ?? PAGE_SIZE
@@ -665,6 +674,44 @@ export default function TrackPage() {
             {typeLabel(row.track_type)}
           </Chip>
         )
+      case 'road_status': {
+        const status = row.road_status ?? '0'
+        const pct = row.road_matched_pct ?? 0
+        // 进度条配色分档：失败 danger 红；完成按匹配率 ≥95% success 绿 / 80–95% accent 蓝 / <80% warning 橙；
+        // 解析中 accent 不定态流动；待解析 default 灰（0%）
+        const color: 'default' | 'accent' | 'success' | 'warning' | 'danger' =
+          status === '3' ? 'danger'
+          : status === '2' ? (pct >= 95 ? 'success' : pct >= 80 ? 'accent' : 'warning')
+          : status === '1' ? 'accent'
+          : 'default'
+        const label =
+          status === '0' ? '待解析'
+          : status === '1' ? '解析中'
+          : status === '2' ? `已完成 ${pct.toFixed(1)}%`
+          : status === '3' ? '解析失败·重试中'
+          : '—'
+        return (
+          <ProgressBar
+            aria-label="轨迹解析进度"
+            className="items-center"
+            size="sm"
+            color={color}
+            isIndeterminate={status === '1'}
+            value={status === '1' ? undefined : pct}
+          >
+            {({ percentage }) => (
+              <div className="flex items-center gap-2">
+                <ProgressBarTrack className="h-1.5 w-16">
+                  <ProgressBarFill />
+                </ProgressBarTrack>
+                <ProgressBarOutput className="whitespace-nowrap text-xs text-muted">
+                  {status === '2' ? `${(percentage ?? pct).toFixed(0)}%` : label}
+                </ProgressBarOutput>
+              </div>
+            )}
+          </ProgressBar>
+        )
+      }
       case 'distance_m':
         return fmtDistance(row.distance_m)
       case 'duration_s':

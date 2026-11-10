@@ -1,8 +1,23 @@
-// 手绘 SVG 时序曲线图：折线（速度序列按速度值渐变着色，与地图轨迹同一套配色）+ 网格 + hover 十字线/tooltip + 图表-地图联动回调
+// Recharts 时序曲线图：折线（速度序列按速度值渐变着色，与地图轨迹同一套配色）+ hover 十字线/tooltip + 图表-地图联动回调
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import {
+  Area,
+  Bar,
+  CartesianGrid,
+  Cell,
+  ComposedChart,
+  Line,
+  ReferenceDot,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
 import { fmtDistance, fmtDuration } from '../../lib/track/format'
 import { colorScaleMax, speedColor } from './speedColors'
 import type { KmSplit } from '../../types/track'
+import type { YAxisTickContentProps } from 'recharts'
 
 export interface ChartSeries {
   key: string
@@ -24,15 +39,17 @@ interface TrackChartProps {
   height?: number
 }
 
-const M = { top: 12, right: 16, bottom: 26, left: 52 }
-const PAD_Y = 0.08 // Y 轴上下留白比例
+const TICK_STYLE = { fontSize: 10, fill: 'var(--muted)' } as const
 const ELE_GRAD_BOTTOM = '#a7f3d0' // 海拔竖向渐变底色（emerald-200）
 
-function niceDomain(min: number, max: number): [number, number] {
-  if (!Number.isFinite(min) || !Number.isFinite(max)) return [0, 1]
-  if (min === max) return [min - 1, max + 1]
-  return [min, max]
-}
+// Y 轴自定义刻度：Recharts 内置 Text 组件按估算宽度会把 "80 km/h" 这类标签强制折行，直接渲染单行 SVG text 绕过
+const renderYTick =
+  (unit: string) =>
+  ({ x, y, payload }: YAxisTickContentProps) => (
+    <text x={Number(x)} y={Number(y) + 3} textAnchor="end" fontSize={10} fill="var(--muted)">
+      {fmtY(Number(payload.value), unit)}
+    </text>
+  )
 
 function fmtX(v: number, kind: 'time' | 'distance', originMs?: number): string {
   if (kind === 'time') {
@@ -46,13 +63,11 @@ function fmtX(v: number, kind: 'time' | 'distance', originMs?: number): string {
 }
 
 function fmtY(v: number, unit: string): string {
-  if (unit === 'km/h') return v.toFixed(1)
-  if (unit === 'min/km') {
-    const m = Math.floor(v / 60)
-    const s = Math.round(v % 60)
-    return `${m}:${String(s).padStart(2, '0')}`
-  }
-  return Math.round(v).toString()
+  let label: string
+  if (unit === 'km/h') label = String(parseFloat(v.toFixed(1)))
+  else if (unit === 'km') label = String(parseFloat(v.toFixed(2)))
+  else label = Math.round(v).toString()
+  return unit ? `${label} ${unit}` : label
 }
 
 export function TrackChart({
@@ -62,107 +77,46 @@ export function TrackChart({
   series,
   activeIndex = null,
   onHoverIndex,
-  height = 220,
 }: TrackChartProps) {
-  const wrapRef = useRef<HTMLDivElement>(null)
-  const [width, setWidth] = useState(600)
-  const [wrapH, setWrapH] = useState(0)
-  const [hover, setHover] = useState<number | null>(null)
-
-  useEffect(() => {
-    const el = wrapRef.current
-    if (!el) return
-    const ro = new ResizeObserver((entries) => {
-      const w = entries[0]?.contentRect.width
-      if (w && w > 0) setWidth(w)
-      setWrapH(el.clientHeight)
-    })
-    ro.observe(el)
-    setWrapH(el.clientHeight)
-    return () => ro.disconnect()
-  }, [])
-
-  // 高度跟随容器（配合父级 flex-1 自动铺满卡片），不低于 height 下限
-  const chartH = Math.max(height, Math.floor(wrapH))
-  const n = xValues.length
-  const plot = { w: Math.max(80, width - M.left - M.right), h: chartH - M.top - M.bottom }
-
-  // X 轴域与有效下标集合
-  const valid = useMemo(
-    () => xValues.map((v, i) => ({ v, i })).filter((x): x is { v: number; i: number } => x.v != null && Number.isFinite(x.v)),
-    [xValues],
-  )
-  const xDomain = useMemo<[number, number]>(() => {
-    if (valid.length === 0) return [0, 1]
-    return niceDomain(valid[0].v, valid[valid.length - 1].v)
-  }, [valid])
-
-  // 每条序列的 Y 域（最多双序列，第二条独立右轴）
-  const yDomains = useMemo<[number, number][]>(
-    () =>
-      series.map((s) => {
-        let min = Infinity
-        let max = -Infinity
-        for (let i = 0; i < n; i++) {
-          const v = s.values[i]
-          if (v == null || !Number.isFinite(v)) continue
-          if (xValues[i] == null) continue
-          if (v < min) min = v
-          if (v > max) max = v
-        }
-        const [lo, hi] = niceDomain(min, max)
-        const pad = (hi - lo) * PAD_Y
-        // 速度纵轴下限钳制为 0：平滑后的瞬时速度可能略低于 0，不允许出现负刻度
-        const y0 = s.unit === 'km/h' ? Math.max(0, lo - pad) : lo - pad
-        return [y0, hi + pad]
-      }),
-    [series, xValues, n],
-  )
-
-  const px = (x: number) => M.left + ((x - xDomain[0]) / (xDomain[1] - xDomain[0])) * plot.w
-  const py = (v: number, si: number) =>
-    M.top + (1 - (v - yDomains[si][0]) / (yDomains[si][1] - yDomains[si][0])) * plot.h
-
-  // 每条序列的折线路径（null 处断开）
-  const paths = series.map((s, si) => {
-    let d = ''
-    let pen = false
-    for (let i = 0; i < n; i++) {
-      const v = s.values[i]
-      const x = xValues[i]
-      if (v == null || !Number.isFinite(v) || x == null) {
-        pen = false
-        continue
-      }
-      d += `${pen ? 'L' : 'M'}${px(x).toFixed(1)},${py(v, si).toFixed(1)}`
-      pen = true
-    }
-    return d
-  })
-
-  // 序列渐变：速度沿线按速度取色（speedColor 绿→黄→红）；海拔为竖向渐变（高处深、低处浅），≤64 个色标
   const gradId = useId()
+  const n = xValues.length
+
+  // 行数据：x 有效（非空）的轨迹点；行内保留原下标 i 用于地图联动，序列值平铺在顶层供 dataKey 读取
+  const rows = useMemo(() => {
+    const list: ({ x: number; i: number } & Record<string, number | null>)[] = []
+    for (let i = 0; i < n; i++) {
+      const x = xValues[i]
+      if (x == null || !Number.isFinite(x)) continue
+      const row: (typeof list)[number] = { x, i }
+      for (const s of series) row[s.key] = s.values[i] ?? null
+      list.push(row)
+    }
+    return list
+  }, [xValues, series, n])
+
+  // 序列渐变：速度沿线按速度取色（speedColor 绿→黄→红）；海拔为竖向渐变（高处深、低处浅）
   const gradients = useMemo(() => {
     return series.map((s) => {
       if (s.key === 'speed') {
         // 与地图轨迹同一取色口径：95 分位 ×1.15 做色标上限，
         // 避免 GPS 毛刺超速点把上限拉爆、正常速度段整条全绿
         const vmax = colorScaleMax(s.values)
-        if (vmax <= 0) return null
+        if (vmax <= 0 || rows.length < 2) return null
+        const xMin = rows[0].x
+        const xMax = rows[rows.length - 1].x
+        const span = xMax - xMin || 1
+        const stride = Math.max(1, Math.floor(rows.length / 64))
         const stops: { offset: number; color: string }[] = []
-        const stride = Math.max(1, Math.floor(valid.length / 64))
-        for (let k = 0; k < valid.length; k += stride) {
-          const idx = valid[k].i
-          const sv = s.values[idx]
+        for (let k = 0; k < rows.length; k += stride) {
+          const sv = rows[k][s.key]
           if (sv == null || !Number.isFinite(sv)) continue
-          const offset = Math.min(Math.max((px(xValues[idx]!) - M.left) / plot.w, 0), 1)
-          stops.push({ offset, color: speedColor(sv, vmax) })
+          stops.push({ offset: (rows[k].x - xMin) / span, color: speedColor(sv, vmax) })
         }
         if (stops.length < 2) return null
+        stops[stops.length - 1].offset = 1
         return { id: `${gradId}-${s.key}`, dir: 'x' as const, stops }
       }
       if (s.key === 'ele') {
-        // 竖向渐变：描边颜色随曲线高低变化（顶部=系列色，底部=浅色），同时用作曲线下填充
         return {
           id: `${gradId}-${s.key}`,
           dir: 'y' as const,
@@ -174,235 +128,238 @@ export function TrackChart({
       }
       return null
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [series, valid, width, chartH, gradId])
+  }, [series, rows, gradId])
 
-  // 海拔曲线下方渐变填充（经典海拔剖面样式）
-  const areas = useMemo(() => {
-    const bottomY = M.top + plot.h
-    return series.map((s, si) => {
-      if (s.key !== 'ele') return null
-      let firstX: number | null = null
-      let lastX: number | null = null
-      for (let i = 0; i < n; i++) {
-        const v = s.values[i]
-        const x = xValues[i]
-        if (v == null || !Number.isFinite(v) || x == null) continue
-        if (firstX == null) firstX = x
-        lastX = x
-      }
-      if (firstX == null || lastX == null) return null
-      return `${paths[si]}L${px(lastX).toFixed(1)},${bottomY}L${px(firstX).toFixed(1)},${bottomY}Z`
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [series, paths, width, chartH])
+  // 地图联动选中点（map 点击/悬停同步回图表）
+  const activeRow = activeIndex != null ? rows.find((r) => r.i === activeIndex) : undefined
 
-  const yTicks = 4
-  // 横轴刻度数量随绘图区宽度自适应（约每 90px 一档，4~10 档），拉伸窗口时刻度自动增密/减密
-  const xTickCount = Math.min(10, Math.max(4, Math.floor(plot.w / 90)))
-
-  const xTickValues = useMemo(() => {
-    if (valid.length === 0) return []
-    const ticks: number[] = []
-    for (let k = 0; k <= xTickCount; k++) {
-      ticks.push(xDomain[0] + ((xDomain[1] - xDomain[0]) * k) / xTickCount)
-    }
-    return ticks
-  }, [xDomain, valid.length, xTickCount])
-
-  const hoverIdx = hover != null && hover >= 0 && hover < n ? hover : null
-  const cursorIdx = hoverIdx ?? activeIndex
-  const cursorX = cursorIdx != null ? xValues[cursorIdx] : null
-
-  const handleMove = (e: React.MouseEvent<SVGSVGElement>) => {
-    if (valid.length === 0 || n === 0) return
-    const rect = e.currentTarget.getBoundingClientRect()
-    const mx = e.clientX - rect.left
-    const ratio = (mx - M.left) / plot.w
-    const target = xDomain[0] + Math.min(1, Math.max(0, ratio)) * (xDomain[1] - xDomain[0])
-    // 就近有效下标
-    let lo = 0
-    let hi = valid.length - 1
-    while (lo < hi) {
-      const mid = (lo + hi) >> 1
-      if (valid[mid].v < target) lo = mid + 1
-      else hi = mid
-    }
-    const idx = valid[lo].i
-    if (idx !== hover) {
-      setHover(idx)
-      onHoverIndex?.(idx)
-    }
+  const handleMouseMove = (state: { activeTooltipIndex: number | string | null | undefined }) => {
+    const idx = state?.activeTooltipIndex
+    if (idx == null) return
+    const row = rows[Number(idx)]
+    onHoverIndex?.(row ? row.i : null)
   }
+  const handleMouseLeave = () => onHoverIndex?.(null)
 
-  const handleLeave = () => {
-    setHover(null)
-    onHoverIndex?.(null)
+  if (rows.length === 0 || series.length === 0) {
+    return <div className="absolute inset-0" />
   }
-
-  // tooltip 位置（HTML 覆盖层）
-  const tipLeft = cursorX != null ? px(cursorX) : 0
-  const tipFlip = tipLeft > M.left + plot.w * 0.6
 
   return (
-    // absolute 脱离布局流：SVG 高度不反撑卡片，容器变矮时图表同步收缩
-    <div ref={wrapRef} className="absolute inset-0 w-full select-none overflow-hidden">
-      <svg
-        width={width}
-        height={chartH}
-        onMouseMove={handleMove}
-        onMouseLeave={handleLeave}
-        className="block"
-        role="img"
-      >
-        {/* 水平网格与 Y 轴刻度（主序列） */}
-        {Array.from({ length: yTicks + 1 }, (_, k) => {
-          const v = yDomains[0][0] + ((yDomains[0][1] - yDomains[0][0]) * k) / yTicks
-          const y = py(v, 0)
-          return (
-            <g key={k}>
-              <line x1={M.left} x2={M.left + plot.w} y1={y} y2={y} className="stroke-separator" strokeWidth={1} />
-              <text x={M.left - 6} y={y + 3} textAnchor="end" className="fill-muted text-[10px]">
-                {fmtY(v, series[0]?.unit ?? '')}
-              </text>
-            </g>
-          )
-        })}
-        {/* X 轴刻度 */}
-        {xTickValues.map((v, k) => (
-          <text
-            key={k}
-            x={px(v)}
-            y={chartH - 8}
-            textAnchor={k === 0 ? 'start' : k === xTickCount ? 'end' : 'middle'}
-            className="fill-muted text-[10px]"
-          >
-            {fmtX(v, xKind, timeOriginMs)}
-          </text>
-        ))}
-        {/* 序列渐变定义（userSpaceOnUse：速度沿 X 轴取色 / 海拔沿 Y 轴取色） */}
-        {gradients.map(
-          (g) =>
-            g ? (
-              <linearGradient
-                key={g.id}
-                id={g.id}
-                gradientUnits="userSpaceOnUse"
-                x1={g.dir === 'y' ? 0 : M.left}
-                y1={g.dir === 'y' ? M.top : 0}
-                x2={g.dir === 'y' ? 0 : M.left + plot.w}
-                y2={g.dir === 'y' ? M.top + plot.h : 0}
-              >
-                {g.stops.map((st, k) => (
-                  <stop key={k} offset={st.offset} stopColor={st.color} />
-                ))}
-              </linearGradient>
-            ) : null,
-        )}
-        {/* 海拔曲线下方渐变填充 */}
-        {areas.map(
-          (d, si) =>
-            d ? (
-              <path
-                key={`area-${series[si].key}`}
-                d={d}
-                fill={`url(#${gradId}-${series[si].key})`}
-                opacity={0.16}
-              />
-            ) : null,
-        )}
-        {/* 序列折线：速度/海拔序列用渐变描边，其余用单色 */}
-        {paths.map((d, si) => {
-          const g = gradients[si]
-          const stroke = g ? `url(#${g.id})` : series[si].color
-          return (
-            <path
-              key={series[si].key}
-              d={d}
-              fill="none"
-              stroke={stroke}
-              strokeWidth={1.8}
-              strokeLinejoin="round"
-            />
-          )
-        })}
-        {/* hover/active 十字线与点 */}
-        {cursorX != null && cursorIdx != null ? (
-          <g>
-            <line
-              x1={px(cursorX)}
-              x2={px(cursorX)}
-              y1={M.top}
-              y2={M.top + plot.h}
-              className="stroke-separator"
-              strokeWidth={1}
-              strokeDasharray="3 3"
-            />
-            {series.map((s, si) => {
-              const v = s.values[cursorIdx]
-              const x = xValues[cursorIdx]
-              if (v == null || x == null) return null
-              return (
-                <circle
-                  key={s.key}
-                  cx={px(x)}
-                  cy={py(v, si)}
-                  r={3.5}
-                  fill={s.color}
-                  stroke="#fff"
-                  strokeWidth={1.5}
-                />
-              )
-            })}
-          </g>
-        ) : null}
-      </svg>
-      {/* tooltip */}
-      {cursorIdx != null && cursorX != null ? (
-        <div
-          className="pointer-events-none absolute top-1 z-10 min-w-32 rounded-lg border border-separator bg-surface px-2.5 py-1.5 text-xs shadow-lg"
-          style={tipFlip ? { right: width - tipLeft + 10 } : { left: tipLeft + 10 }}
+    <div className="absolute inset-0 w-full select-none">
+      <ResponsiveContainer width="100%" height="100%">
+        {/* ComposedChart：折线+海拔面积混排（Recharts v3 的 Area 在 LineChart 内不渲染） */}
+        <ComposedChart
+          data={rows}
+          margin={{ top: 12, right: 16, bottom: 4, left: 0 }}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
         >
-          <p className="mb-0.5 text-muted">{fmtX(cursorX, xKind, timeOriginMs)}</p>
-          {series.map((s) => {
-            const v = s.values[cursorIdx]
+          <defs>
+            {gradients.map((g) =>
+              g ? (
+                <linearGradient key={g.id} id={g.id} x1={g.dir === 'y' ? 0 : 0} y1={g.dir === 'y' ? 0 : 0} x2={g.dir === 'y' ? 0 : 1} y2={g.dir === 'y' ? 1 : 0}>
+                  {g.stops.map((st, k) => (
+                    <stop key={k} offset={st.offset} stopColor={st.color} />
+                  ))}
+                </linearGradient>
+              ) : null,
+            )}
+          </defs>
+          <CartesianGrid vertical={false} stroke="var(--separator)" />
+          <XAxis
+            dataKey="x"
+            type="number"
+            domain={['dataMin', 'dataMax']}
+            height={24}
+            tick={TICK_STYLE}
+            tickLine={false}
+            axisLine={false}
+            minTickGap={32}
+            tickFormatter={(v: number) => fmtX(v, xKind, timeOriginMs)}
+          />
+          {series.map((s, si) => {
+            // 累计里程与速度纵轴从 0 起：累计量单调递增、平滑速度可能略低于 0，均不允许负刻度
+            const zeroBase = s.key === 'cumdist' || s.unit === 'km/h'
+            const id = si === 0 ? 'y-main' : `y-${s.key}`
             return (
-              <p key={s.key} className="flex items-center justify-between gap-3">
-                <span className="flex items-center gap-1.5 text-muted">
-                  <span className="inline-block size-2 rounded-full" style={{ backgroundColor: s.color }} />
-                  {s.label}
-                </span>
-                <span className="font-medium text-foreground">
-                  {v == null ? '—' : `${fmtY(v, s.unit)} ${s.unit}`}
-                </span>
-              </p>
+              <YAxis
+                key={id}
+                yAxisId={id}
+                orientation={si === 0 ? 'left' : 'right'}
+                width={si === 0 ? 56 : 48}
+                domain={zeroBase ? [0, 'auto'] : ['auto', 'auto']}
+                tickCount={5}
+                tick={renderYTick(s.unit)}
+                tickLine={false}
+                axisLine={false}
+                tickFormatter={(v: number) => fmtY(v, s.unit)}
+              />
             )
           })}
-        </div>
-      ) : null}
+          <Tooltip
+            cursor={{ stroke: 'var(--separator)', strokeDasharray: '3 3' }}
+            isAnimationActive={false}
+            content={(props) => {
+              const { active, payload, label } = props
+              if (!active || !payload?.length) return null
+              return (
+                <div className="min-w-32 rounded-lg border border-separator bg-surface px-2.5 py-1.5 text-xs shadow-lg">
+                  <p className="mb-0.5 text-muted">{fmtX(Number(label), xKind, timeOriginMs)}</p>
+                  {series.map((s) => {
+                    const v = payload.find((p) => p.dataKey === s.key)?.value
+                    if (v == null) return null
+                    return (
+                      <p key={s.key} className="flex items-center justify-between gap-3">
+                        <span className="flex items-center gap-1.5 text-muted">
+                          <span className="inline-block size-2 rounded-full" style={{ backgroundColor: s.color }} />
+                          {s.label}
+                        </span>
+                        <span className="font-medium text-foreground">{fmtY(Number(v), s.unit)}</span>
+                      </p>
+                    )
+                  })}
+                </div>
+              )
+            }}
+          />
+          {activeRow ? (
+            <ReferenceLine yAxisId="y-main" x={activeRow.x} stroke="var(--separator)" strokeDasharray="3 3" />
+          ) : null}
+          {series.map((s, si) => {
+            const id = si === 0 ? 'y-main' : `y-${s.key}`
+            const g = gradients[si]
+            const stroke = g ? `url(#${g.id})` : s.color
+            if (s.key === 'ele') {
+              return (
+                <Area
+                  key={s.key}
+                  yAxisId={id}
+                  dataKey={s.key}
+                  type="monotone"
+                  stroke={stroke}
+                  strokeWidth={1.8}
+                  fill={`url(#${g?.id ?? gradId})`}
+                  fillOpacity={0.16}
+                  connectNulls={false}
+                  isAnimationActive={false}
+                  activeDot={{ r: 3.5, fill: s.color, stroke: '#fff', strokeWidth: 1.5 }}
+                />
+              )
+            }
+            return (
+              <Line
+                key={s.key}
+                yAxisId={id}
+                dataKey={s.key}
+                type="monotone"
+                stroke={stroke}
+                strokeWidth={1.8}
+                strokeLinejoin="round"
+                connectNulls={false}
+                isAnimationActive={false}
+                dot={false}
+                activeDot={{ r: 3.5, fill: s.color, stroke: '#fff', strokeWidth: 1.5 }}
+              />
+            )
+          })}
+          {activeRow
+            ? series.map((s, si) => {
+                const id = si === 0 ? 'y-main' : `y-${s.key}`
+                const v = activeRow[s.key]
+                if (v == null || !Number.isFinite(v)) return null
+                return (
+                  <ReferenceDot
+                    key={s.key}
+                    yAxisId={id}
+                    x={activeRow.x}
+                    y={v}
+                    r={3.5}
+                    fill={s.color}
+                    stroke="#fff"
+                    strokeWidth={1.5}
+                  />
+                )
+              })
+            : null}
+        </ComposedChart>
+      </ResponsiveContainer>
     </div>
   )
 }
 
-// ---- 每公里分段条形图 ----
+// ---- 每公里分段条形图（柱高=该公里配速，越高越慢） ----
 
 interface SplitsChartProps {
   splits: KmSplit[]
   height?: number
 }
 
-// 平均速度 → 颜色透明度（快=深）
+// 配速刻度（秒/公里 → 5'30"）
+function fmtPaceTick(v: number): string {
+  const m0 = Math.floor(v / 60)
+  const s0 = Math.round(v % 60)
+  const m = s0 === 60 ? m0 + 1 : m0
+  const s = s0 === 60 ? 0 : s0
+  return `${m}'${String(s).padStart(2, '0')}"`
+}
+
+// 配速自定义刻度：与折线图同因绕过内置 Text 强制折行
+const renderPaceTick = ({ x, y, payload }: YAxisTickContentProps) => (
+  <text x={Number(x)} y={Number(y) + 3} textAnchor="end" fontSize={9} fill="var(--muted)">
+    {fmtPaceTick(Number(payload.value))}
+  </text>
+)
+
+// 均速 → 颜色透明度（快=深）
 function speedOpacity(v: number, min: number, max: number): number {
   if (max <= min) return 0.75
   return 0.35 + 0.6 * ((v - min) / (max - min))
 }
 
+// 均速刻度：km/h 单行渲染（同绕过内置 Text 强制折行）
+const renderSpeedTick = ({ x, y, payload }: YAxisTickContentProps) => (
+  <text x={Number(x)} y={Number(y) + 3} textAnchor="end" fontSize={9} fill="var(--muted)">
+    {fmtY(Number(payload.value), 'km/h')}
+  </text>
+)
+
+// 分段悬浮提示（均速柱/配速线共用）
+const renderSplitTooltip = ({ active, payload }: { active?: boolean; payload?: readonly { payload?: unknown }[] }) => {
+  const s = payload?.[0]?.payload as KmSplit | undefined
+  if (!active || !s) return null
+  return (
+    <div className="min-w-40 rounded-lg border border-separator bg-surface px-2.5 py-1.5 text-xs shadow-lg">
+      <p className="mb-0.5 font-medium text-foreground">第 {s.index} 公里</p>
+      <p className="text-muted">
+        用时 <span className="font-medium text-foreground">{fmtDuration(s.duration_s)}</span>
+      </p>
+      <p className="text-muted">
+        均速 <span className="font-medium text-foreground">{s.avg_speed_kmh.toFixed(1)} km/h</span>
+        {s.pace_s_per_km != null ? (
+          <>
+            {' '}· 配速{' '}
+            <span className="font-medium text-foreground">
+              {Math.floor(s.pace_s_per_km / 60)}'
+              {String(Math.round(s.pace_s_per_km % 60)).padStart(2, '0')}"
+            </span>
+          </>
+        ) : null}
+      </p>
+      <p className="text-muted">
+        爬升 <span className="font-medium text-foreground">{s.ascent_m} m</span>
+      </p>
+    </div>
+  )
+}
+
 // 分段过多时的最小格宽（px）：低于该宽度不再压缩柱子，改为容器横向滚动（隐藏滚动条）
 const SPLITS_MIN_CELL = 26
 
+const PACE_LINE_COLOR = '#f59e0b' // 配速折线颜色（琥珀，与速度蓝色柱对比；与 SERIES_COLORS.pace 一致）
+
 export function SplitsChart({ splits, height = 160 }: SplitsChartProps) {
-  const [hover, setHover] = useState<number | null>(null)
-  // 宽高均由父级（flex-1 容器）决定：ResizeObserver 实测后柱状图铺满容器
+  // 宽高均由父级（flex-1 容器）决定：超出容器宽时横向滚动
   const wrapRef = useRef<HTMLDivElement>(null)
   const [wrapW, setWrapW] = useState(0)
   const [wrapH, setWrapH] = useState(0)
@@ -432,16 +389,12 @@ export function SplitsChart({ splits, height = 160 }: SplitsChartProps) {
     el.addEventListener('wheel', onWheel, { passive: false })
     return () => el.removeEventListener('wheel', onWheel)
   }, [])
-  const speeds = splits.map((s) => s.avg_speed_kmh)
-  const min = Math.min(...speeds)
-  const max = Math.max(...speeds)
-  // 柱子细长样式：分段少时铺满容器；分段多时每段保证最小格宽，超出部分横向滚动
-  const barGap = 3
-  const contentW = Math.max(wrapW, splits.length * SPLITS_MIN_CELL)
-  const cell = splits.length > 0 && contentW > 0 ? contentW / splits.length : 0
-  const barW = Math.max(2, Math.min(cell - barGap, cell * 0.5))
-  const maxSpeed = Math.max(max, 0.1)
-  const chartW = contentW
+  // 均速域：无效值不参与深浅映射
+  const speeds = splits.map((s) => s.avg_speed_kmh).filter((v) => Number.isFinite(v))
+  const minSpeed = speeds.length > 0 ? Math.min(...speeds) : 0
+  const maxSpeed = speeds.length > 0 ? Math.max(...speeds) : 1
+  const chartW = Math.max(wrapW, splits.length * SPLITS_MIN_CELL)
+  const cell = chartW / Math.max(1, splits.length)
   const chartH = wrapH || height
 
   if (splits.length === 0) {
@@ -449,62 +402,77 @@ export function SplitsChart({ splits, height = 160 }: SplitsChartProps) {
   }
 
   return (
-    // 外层 relative 承载悬浮提示（不随滚动移动）；内层横向滚动并隐藏滚动条
+    // 外层 relative 承载悬浮提示；内层横向滚动并隐藏滚动条
     <div className="absolute inset-0">
       <div
         ref={wrapRef}
         className="h-full w-full overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
-        <svg width={chartW} height={chartH} className="block" role="img">
-          {splits.map((s, i) => {
-            const h = Math.max(4, (s.avg_speed_kmh / maxSpeed) * (chartH - 30))
-            const x = i * cell + (cell - barW) / 2
-            const y = chartH - 22 - h
-            return (
-              <g key={s.index} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)}>
-                <rect
-                  x={x}
-                  y={y}
-                  width={barW}
-                  height={h}
-                  rx={2}
-                  className="fill-accent"
-                  opacity={hover != null && hover !== i ? 0.35 : speedOpacity(s.avg_speed_kmh, min, max)}
-                />
-                {/* 格位过窄时隔一显示公里数，避免数字重叠 */}
-                {cell >= 11 || s.index % 2 === 1 ? (
-                  <text x={x + barW / 2} y={chartH - 8} textAnchor="middle" className="fill-muted text-[9px]">
-                    {s.index}
-                  </text>
-                ) : null}
-              </g>
-            )
-          })}
-        </svg>
+        {/* 组合图：同横轴（公里），左纵轴=每公里均速（柱状，蓝），右纵轴=每公里配速（折线，琥珀，越高越慢） */}
+        <ComposedChart width={chartW} height={chartH} data={splits} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+          <CartesianGrid vertical={false} stroke="var(--separator)" />
+          <XAxis
+            dataKey="index"
+            interval={0}
+            height={20}
+            tick={{ fontSize: 9, fill: 'var(--muted)' }}
+            tickLine={false}
+            axisLine={false}
+            /* 格位过窄时隔一显示公里数，避免数字重叠 */
+            tickFormatter={(v: number) => (cell >= 11 || v % 2 === 1 ? String(v) : '')}
+          />
+          <YAxis
+            yAxisId="speed"
+            orientation="left"
+            width={46}
+            domain={[0, 'auto']}
+            tickCount={3}
+            tick={renderSpeedTick}
+            tickLine={false}
+            axisLine={false}
+          />
+          <YAxis
+            yAxisId="pace"
+            orientation="right"
+            width={44}
+            domain={['auto', 'auto']}
+            tickCount={3}
+            tick={renderPaceTick}
+            tickLine={false}
+            axisLine={false}
+          />
+          <Tooltip cursor={{ fill: 'var(--surface-secondary)' }} isAnimationActive={false} content={renderSplitTooltip} />
+          <Bar
+            yAxisId="speed"
+            dataKey="avg_speed_kmh"
+            radius={2}
+            isAnimationActive={false}
+            barSize={Math.max(2, Math.min(cell - 3, cell * 0.5))}
+          >
+            {splits.map((s) => (
+              <Cell
+                key={s.index}
+                fill="var(--accent)"
+                fillOpacity={
+                  s.avg_speed_kmh != null && Number.isFinite(s.avg_speed_kmh)
+                    ? speedOpacity(s.avg_speed_kmh, minSpeed, maxSpeed)
+                    : 0.35
+                }
+              />
+            ))}
+          </Bar>
+          <Line
+            yAxisId="pace"
+            dataKey="pace_s_per_km"
+            type="monotone"
+            stroke={PACE_LINE_COLOR}
+            strokeWidth={1.8}
+            dot={{ r: 2, fill: PACE_LINE_COLOR, strokeWidth: 0 }}
+            connectNulls={false}
+            isAnimationActive={false}
+          />
+        </ComposedChart>
       </div>
-      {hover != null && splits[hover] ? (
-        <div className="pointer-events-none absolute -top-1 right-0 z-10 min-w-40 rounded-lg border border-separator bg-surface px-2.5 py-1.5 text-xs shadow-lg">
-          <p className="mb-0.5 font-medium text-foreground">第 {splits[hover].index} 公里</p>
-          <p className="text-muted">
-            用时 <span className="font-medium text-foreground">{fmtDuration(splits[hover].duration_s)}</span>
-          </p>
-          <p className="text-muted">
-            均速 <span className="font-medium text-foreground">{splits[hover].avg_speed_kmh.toFixed(1)} km/h</span>
-            {splits[hover].pace_s_per_km != null ? (
-              <>
-                {' '}· 配速{' '}
-                <span className="font-medium text-foreground">
-                  {Math.floor(splits[hover].pace_s_per_km / 60)}'
-                  {String(Math.round(splits[hover].pace_s_per_km % 60)).padStart(2, '0')}"
-                </span>
-              </>
-            ) : null}
-          </p>
-          <p className="text-muted">
-            爬升 <span className="font-medium text-foreground">{splits[hover].ascent_m} m</span>
-          </p>
-        </div>
-      ) : null}
     </div>
   )
 }
