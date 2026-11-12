@@ -23,6 +23,8 @@ import {
   BUTTON_STYLE_OPTIONS,
   MODAL_BACKDROP_KEY,
   MODAL_BACKDROP_OPTIONS,
+  ROAD_MATCHER_KEY,
+  ROAD_MATCHER_OPTIONS,
 } from '../../../api/config'
 import type { ConfigPayload, SysConfigRow } from '../../../types/config'
 
@@ -98,7 +100,9 @@ export default function ConfigFormModal({ isOpen, editing, onClose }: Props) {
       ? MODAL_BACKDROP_OPTIONS
       : form.configKey.trim() === BUTTON_STYLE_KEY
         ? BUTTON_STYLE_OPTIONS
-        : null
+        : form.configKey.trim() === ROAD_MATCHER_KEY
+          ? ROAD_MATCHER_OPTIONS
+          : null
 
   return (
     <FormModal

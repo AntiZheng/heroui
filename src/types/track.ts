@@ -160,6 +160,7 @@ export interface TrackRoadRow {
 export interface TrackRoadsResult {
   segments: TrackRoadRow[]
   matched_pct: number | null
+  matcher: string | null
 }
 
 // 解析结果（导入预览用）

@@ -52,3 +52,11 @@ export const BUTTON_STYLE_OPTIONS = [
 ] as const
 
 export type ButtonStyleVariant = (typeof BUTTON_STYLE_OPTIONS)[number]['key']
+
+// 轨迹路段解析方法：tile 为 OSM 瓦片逐点匹配（现状），hmm 为隐马尔可夫全局匹配
+export const ROAD_MATCHER_KEY = 'sys.track.roadMatcher'
+
+export const ROAD_MATCHER_OPTIONS = [
+  { key: 'tile', label: '瓦片匹配（现状）' },
+  { key: 'hmm', label: 'HMM 匹配' },
+] as const

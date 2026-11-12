@@ -677,6 +677,12 @@ function TrackDetailView({ row, onBack }: DetailProps) {
           <div className="flex items-center gap-3 border-b border-separator px-4 py-3">
             <Route size={15} className="shrink-0 text-accent" aria-hidden />
             <span className="text-[13px] font-semibold text-foreground">路段分析</span>
+            {roadsData?.matcher && (
+              <Chip size="sm" variant="soft"
+                    color={roadsData.matcher === 'hmm' ? 'warning' : 'accent'}>
+                {roadsData.matcher === 'hmm' ? 'HMM 匹配' : '瓦片匹配'}
+              </Chip>
+            )}
             <button
               type="button"
               onClick={() => setPanelOpen((v) => (v === 'roads' ? null : 'roads'))}
