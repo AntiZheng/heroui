@@ -34,12 +34,14 @@ import {
   Typography,
   toast,
 } from '@heroui/react'
+import type { Selection } from 'react-aria-components'
 import {
   Activity,
   ArrowLeft,
   BarChart3,
   CalendarClock,
   ChevronDown,
+  ChevronRight,
   ChevronUp,
   Clock,
   FileUp,
@@ -65,7 +67,8 @@ import { TrackAmapLayer } from '../../components/track/TrackAmapLayer'
 import { SpeedLegend } from '../../components/track/SpeedLegend'
 import { hasSpeedData, maxSpeedOf } from '../../components/track/speedColors'
 import { SplitsChart, TrackChart, type ChartSeries } from '../../components/track/TrackChart'
-import { deleteTracks, getTrackDetail, getTrackList, addTrack, type TrackListQuery } from '../../api/track'
+import { RoadsPanel } from '../../components/track/RoadsPanel'
+import { deleteTracks, getTrackDetail, getTrackList, addTrack, getTrackRoads, type TrackListQuery } from '../../api/track'
 import { parseTrackFile, geoJSONToPoints } from '../../lib/track/parse'
 import { analyzeTrack } from '../../lib/track/metrics'
 import { uploadTrackSource } from '../../lib/track/upload'
@@ -73,6 +76,7 @@ import { fmtDateTime, fmtDistance, fmtDuration, fmtEle, fmtPace, fmtSpeed, fmtTi
 import { wgs84ToGcj02 } from '../../lib/geo'
 import { hasPermission } from '../../stores/auth'
 import { ColumnSettings, useColPrefs, useStickyColumns } from '../../components/ColumnSettings'
+import SelectionCheckbox from '../../components/SelectionCheckbox'
 import PaginationBar from '../../components/PaginationBar'
 import type { ParsedTrack, TrackPoint, TrackRow } from '../../types/track'
 
@@ -248,6 +252,62 @@ function MetricCard({ label, value, hint, icon }: { label: string; value: ReactN
   )
 }
 
+// ---- 底部抽屉外壳（轨迹分析 / 路段分析共用） ----
+
+/** 折叠时仅剩把手（内容 maxHeight:0 收缩、随 flex 容器贴底），展开时 flex-1 占满剩余宽度、与另一把手共存 */
+function BottomDrawer({
+  open,
+  onToggle,
+  icon,
+  title,
+  summary,
+  children,
+}: {
+  open: boolean
+  onToggle: () => void
+  icon: ReactNode
+  title: string
+  summary?: ReactNode
+  children: ReactNode
+}) {
+  return (
+    <div
+      className={`pointer-events-none min-w-0 transform overflow-hidden transition-transform duration-300 ease-out ${
+        open ? 'flex-1 translate-y-0' : 'w-fit shrink-0'
+      }`}
+    >
+      <div
+        className={`pointer-events-auto rounded-2xl border border-white/40 bg-white/15 shadow-2xl backdrop-blur-2xl backdrop-saturate-150 transition-[width] duration-300 dark:border-white/10 dark:bg-black/35 [box-shadow:inset_0_1px_0_0_rgba(255,255,255,0.4),0_8px_32px_rgba(0,0,0,0.15)] ${
+          open ? 'w-full' : 'w-fit'
+        }`}
+      >
+        <button
+          type="button"
+          onClick={onToggle}
+          className="flex w-full items-center gap-3 whitespace-nowrap px-4 py-3 text-left"
+          aria-expanded={open}
+        >
+          {icon}
+          <span className="text-[13px] font-semibold text-foreground">{title}</span>
+          {summary}
+          <span className="ml-auto flex size-6 shrink-0 items-center justify-center rounded-full bg-white/30 text-muted dark:bg-white/10">
+            {open ? <ChevronDown size={14} aria-hidden /> : <ChevronUp size={14} aria-hidden />}
+          </span>
+        </button>
+        <div
+          className={`overflow-y-auto overflow-x-hidden transition-[max-height,width] duration-300 ease-out ${
+            open ? 'border-t border-separator' : ''
+          }`}
+          style={{ maxHeight: open ? 'min(76vh, 620px)' : 0, width: open ? '100%' : 0 }}
+          aria-hidden={!open}
+        >
+          {children}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ---- 详情视图 ----
 
 interface DetailProps {
@@ -264,13 +324,22 @@ function TrackDetailView({ row, onBack }: DetailProps) {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null)
   const [xKind, setXKind] = useState<'time' | 'distance'>('time')
   const [metric, setMetric] = useState<'speed' | 'ele' | 'cumdist'>('speed')
-  const [panelOpen, setPanelOpen] = useState(false)
+  // 底部抽屉开合状态：同一时间只展开一个（null=全部收起，两把手并排）
+  const [panelOpen, setPanelOpen] = useState<'track' | 'roads' | null>(null)
   const viewportRef = useRef<Viewport>({ center: [104.2, 35.9], zoom: 4, pitch: 0 })
 
   const { data: detail, isPending } = useQuery({
     queryKey: ['track-detail', row.track_id],
     queryFn: () => getTrackDetail(row.track_id),
   })
+
+  // 路段解析结果（把手摘要也需要）；解析完成前轮询，完成后停止
+  const { data: roadsData } = useQuery({
+    queryKey: ['track-roads', row.track_id],
+    queryFn: () => getTrackRoads(row.track_id),
+    refetchInterval: row.road_status !== '2' ? 10_000 : false,
+  })
+  const roadSegments = roadsData?.segments ?? []
 
   const points = useMemo(() => (detail ? extractPoints(detail) : []), [detail])
   const analysis = useMemo(() => {
@@ -395,8 +464,8 @@ function TrackDetailView({ row, onBack }: DetailProps) {
       </div>
 
       {/* 速度比例尺图例（左下角）：色带 + 双滑块调节上下限筛选轨迹段；
-          轨迹分析面板展开时隐藏图例（避免浮在面板上方），折叠面板即可继续筛选 */}
-      {speedRange && !panelOpen ? <SpeedLegend points={points} range={speedRange} onChange={setSpeedRange} /> : null}
+          任一底部抽屉展开时隐藏图例（避免浮在面板上方），折叠面板即可继续筛选 */}
+      {speedRange && panelOpen === null ? <SpeedLegend points={points} range={speedRange} onChange={setSpeedRange} /> : null}
 
       {/* 返回按钮（浮动在地图左上角） */}
       <Button
@@ -410,46 +479,31 @@ function TrackDetailView({ row, onBack }: DetailProps) {
         <ArrowLeft size={14} aria-hidden />
       </Button>
 
-      {/* 底部轨迹分析抽屉：从下弹出 */}
-      {analysis ? (
-        <div
-          className={`pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-center overflow-hidden rounded-2xl transform transition-transform duration-300 ease-out ${
-            panelOpen ? 'translate-y-0' : 'translate-y-[calc(100%-60px)]'
-          }`}
-        >
-          <div
-            className={`pointer-events-auto rounded-2xl border border-white/40 bg-white/15 shadow-2xl backdrop-blur-2xl backdrop-saturate-150 transition-[width] duration-300 dark:border-white/10 dark:bg-black/35 [box-shadow:inset_0_1px_0_0_rgba(255,255,255,0.4),0_8px_32px_rgba(0,0,0,0.15)] ${
-              panelOpen ? 'w-full' : 'w-fit max-w-[92%]'
-            }`}
-          >
-            {/* 抽屉把手：折叠时显示摘要 */}
-            <button
-              type="button"
-              onClick={() => setPanelOpen((v) => !v)}
-              className="flex w-full items-center gap-3 whitespace-nowrap px-4 py-3 text-left"
-              aria-expanded={panelOpen}
-            >
-              <BarChart3 size={15} className="shrink-0 text-accent" aria-hidden />
-              <span className="text-[13px] font-semibold text-foreground">轨迹分析</span>
-              {!panelOpen ? (
+      {/* 底部抽屉组：轨迹分析 + 路段分析并列把手，同一时间只展开一个；
+          有抽屉展开时隐藏另一个把手，让展开方撑满整个内容区（全部收起时才并排显示两把手）；
+          容器必须 pointer-events-none（展开后容器被撑高成全宽横带，否则拦住地图拖拽），命中由抽屉卡片自身接管 */}
+      <div
+        className={`pointer-events-none absolute inset-x-0 z-30 flex items-end justify-center gap-3 ${
+          panelOpen === null ? 'bottom-3' : 'bottom-0'
+        }`}
+      >
+        {analysis && (panelOpen === null || panelOpen === 'track') ? (
+          <BottomDrawer
+            open={panelOpen === 'track'}
+            onToggle={() => setPanelOpen((v) => (v === 'track' ? null : 'track'))}
+            icon={<BarChart3 size={15} className="shrink-0 text-accent" aria-hidden />}
+            title="轨迹分析"
+            summary={
+              panelOpen !== 'track' ? (
                 <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-0.5 text-xs font-medium text-foreground">
                   <span>{fmtDistance(analysis.distance_m)}</span>
                   <span>{fmtDuration(analysis.duration_s)}</span>
                   <span>{fmtSpeed(analysis.avg_speed_kmh)}</span>
                 </span>
-              ) : null}
-              <span className="ml-auto flex size-6 shrink-0 items-center justify-center rounded-full bg-white/30 text-muted dark:bg-white/10">
-                {panelOpen ? <ChevronDown size={14} aria-hidden /> : <ChevronUp size={14} aria-hidden />}
-              </span>
-            </button>
-
-            {/* 抽屉内容：展开时向下撑开、内部滚动；折叠时高度与宽度同时收为 0，不参与卡片宽度计算 */}
-            <div
-              className="overflow-y-auto overflow-x-hidden border-t border-separator transition-[max-height,width] duration-300 ease-out"
-              style={{ maxHeight: panelOpen ? 'min(76vh, 620px)' : 0, width: panelOpen ? '100%' : 0 }}
-              aria-hidden={!panelOpen}
-            >
-              <div className="flex flex-col gap-3 px-4 py-3 pb-4">
+              ) : null
+            }
+          >
+            <div className="flex flex-col gap-3 px-4 py-3 pb-4">
                 {/* 指标卡片 */}
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
                   <MetricCard label="总里程" icon={<Route size={12} aria-hidden />} value={fmtDistance(analysis.distance_m)} hint={`${analysis.point_count} 个轨迹点`} />
@@ -582,10 +636,72 @@ function TrackDetailView({ row, onBack }: DetailProps) {
                   </div>
                 </div>
               </div>
-            </div>
+          </BottomDrawer>
+        ) : null}
+        {panelOpen === null ? (
+          /* 路段分析把手：与轨迹分析把手并排（点击从右侧滑出面板，ChevronRight 指示展开方向） */
+          <button
+            type="button"
+            onClick={() => setPanelOpen((v) => (v === 'roads' ? null : 'roads'))}
+            aria-expanded={false}
+            className="pointer-events-auto flex items-center gap-3 whitespace-nowrap rounded-2xl border border-white/40 bg-white/15 px-4 py-3 shadow-2xl backdrop-blur-2xl backdrop-saturate-150 transition-colors dark:border-white/10 dark:bg-black/35 [box-shadow:inset_0_1px_0_0_rgba(255,255,255,0.4),0_8px_32px_rgba(0,0,0,0.15)]"
+          >
+            <Route size={15} className="shrink-0 text-accent" aria-hidden />
+            <span className="text-[13px] font-semibold text-foreground">路段分析</span>
+            <span className="text-xs font-medium text-foreground">
+              {roadSegments.length > 0
+                ? `路段 ${roadSegments.length} · 匹配 ${(roadsData?.matched_pct ?? 0).toFixed(1)}%`
+                : row.road_status === '1'
+                  ? '解析中…'
+                  : row.road_status === '3'
+                    ? '解析失败·重试中'
+                    : '未解析'}
+            </span>
+            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-white/30 text-muted dark:bg-white/10">
+              <ChevronRight size={14} aria-hidden />
+            </span>
+          </button>
+        ) : null}
+      </div>
+
+      {/* 右侧路段分析抽屉：从右滑出（与底部轨迹分析同一时间只展开一个）；
+          容器直接定宽 w-1/2（相对地图内容区一半、贴右缘），面板撑满容器——
+          若容器收缩自适应，面板的百分比宽度会算在容器上导致不对齐 */}
+      <div
+        className={`pointer-events-none absolute inset-y-0 right-0 z-30 w-3/5 max-w-[92vw] transform transition-transform duration-300 ease-out ${
+          panelOpen === 'roads' ? 'translate-x-0' : 'translate-x-full'
+        }`}
+      >
+        <div className="pointer-events-auto flex h-full w-full flex-col rounded-l-2xl border border-white/40 bg-white/15 shadow-2xl backdrop-blur-2xl backdrop-saturate-150 dark:border-white/10 dark:bg-black/35 [box-shadow:inset_0_1px_0_0_rgba(255,255,255,0.4),0_8px_32px_rgba(0,0,0,0.15)]">
+          {/* 标题栏 */}
+          <div className="flex items-center gap-3 border-b border-separator px-4 py-3">
+            <Route size={15} className="shrink-0 text-accent" aria-hidden />
+            <span className="text-[13px] font-semibold text-foreground">路段分析</span>
+            <button
+              type="button"
+              onClick={() => setPanelOpen((v) => (v === 'roads' ? null : 'roads'))}
+              aria-expanded={panelOpen === 'roads'}
+              aria-label="收起路段分析"
+              className="ml-auto flex size-6 shrink-0 items-center justify-center rounded-full bg-white/30 text-muted transition-colors hover:text-foreground dark:bg-white/10"
+            >
+              <ChevronRight size={14} aria-hidden />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            {roadSegments.length > 0 ? (
+              <RoadsPanel segments={roadSegments} matchedPct={roadsData?.matched_pct ?? null} />
+            ) : (
+              <p className="px-4 py-10 text-center text-xs text-muted">
+                {row.road_status === '1'
+                  ? '路段解析中，完成后自动展示'
+                  : row.road_status === '3'
+                    ? '路段解析失败，等待自动重试'
+                    : '该轨迹尚未完成路段解析'}
+              </p>
+            )}
           </div>
         </div>
-      ) : null}
+      </div>
     </div>
   )
 }
@@ -629,7 +745,7 @@ export default function TrackPage() {
   const [nameInput, setNameInput] = useState('')
   const [detailRow, setDetailRow] = useState<TrackRow | null>(null)
   const [deleting, setDeleting] = useState<TrackRow | null>(null)
-  const [selectedIds, setSelectedIds] = useState<number[]>([])
+  const [selected, setSelected] = useState<Selection>(new Set<number>())
   const [importOpen, setImportOpen] = useState(false)
   const queryClient = useQueryClient()
 
@@ -651,6 +767,11 @@ export default function TrackPage() {
       q.state.data?.rows.some((r) => r.road_status !== '2') ? 10_000 : false,
   })
   const rows = useMemo(() => data?.rows ?? [], [data])
+  // 勾选列 → 批量删除用的 id 列表（'all' = 当前页全选）
+  const selectedIds = useMemo(
+    () => (selected === 'all' ? rows.map((r) => r.track_id) : Array.from(selected).map(Number)),
+    [selected, rows],
+  )
   const pageSize = query.pageSize ?? PAGE_SIZE
 
   const search = () => setQuery((q) => ({ ...q, pageNum: 1, trackName: nameInput || undefined }))
@@ -797,7 +918,7 @@ export default function TrackPage() {
       return
     }
     toast('成功', { description: '删除成功', variant: 'success' })
-    setSelectedIds([])
+    setSelected(new Set<number>())
     void queryClient.invalidateQueries({ queryKey: ['track-list'] })
   }
 
@@ -869,8 +990,18 @@ export default function TrackPage() {
           <div ref={tableAreaRef} className="flex min-h-0 flex-col">
             <TableRoot className="flex! min-h-0 flex-col shadow-sm">
               <TableScrollContainer className="min-h-0 flex-1 overflow-auto rounded-2xl">
-                <TableContent aria-label="轨迹数据列表" className="min-w-[980px]">
+                <TableContent
+                  aria-label="轨迹数据列表"
+                  className="min-w-[980px]"
+                  selectionMode="multiple"
+                  selectionBehavior="toggle"
+                  selectedKeys={selected}
+                  onSelectionChange={setSelected}
+                >
                   <TableHeader className="sticky top-0 z-20 bg-surface-secondary">
+                    <TableColumn id="__select" className="pe-0!">
+                      <SelectionCheckbox label="全选" />
+                    </TableColumn>
                     {visibleColumns.map((col) => {
                       const sticky = stickyColProps(col.key, true)
                       const merged = `whitespace-nowrap ${'className' in sticky ? sticky.className : ''}`
@@ -905,6 +1036,9 @@ export default function TrackPage() {
                   >
                     {(row) => (
                       <TableRow id={row.id} className="whitespace-nowrap">
+                        <TableCell key="__select" className="pe-0!">
+                          <SelectionCheckbox label={`选择 ${row.track_name ?? row.id}`} variant="secondary" />
+                        </TableCell>
                         {visibleColumns.map((col) => (
                           <TableCell key={col.key} {...stickyColProps(col.key, false)}>
                             {renderCell(row, col.key)}

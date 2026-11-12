@@ -136,6 +136,32 @@ export interface TrackUpdatePayload {
   remark?: string | null
 }
 
+// OSM 路段解析结果行（biz_track_road 精简字段，统计在前端完成）
+export interface TrackRoadRow {
+  seq: number // 路段序号（按里程递增，1 起展示时 +1）
+  dist_s: number // 起始里程（米）
+  dist_e: number // 结束里程（米）
+  road_cls: string // OSM class（motorway/trunk/primary…）
+  subclass?: string | null
+  surface?: string | null
+  brunnel?: string | null // bridge/tunnel/ford
+  toll?: number | null
+  expressway?: number | null
+  ramp?: number | null
+  service?: string | null
+  name?: string | null
+  name_zh?: string | null
+  ref?: string | null
+  maxspeed?: string | null
+  avg_spd?: number | null // 区间均速（km/h）
+}
+
+// 路段解析查询结果
+export interface TrackRoadsResult {
+  segments: TrackRoadRow[]
+  matched_pct: number | null
+}
+
 // 解析结果（导入预览用）
 export interface ParsedTrack {
   name: string
