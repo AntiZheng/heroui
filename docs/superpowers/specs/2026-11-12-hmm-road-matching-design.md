@@ -83,7 +83,7 @@ Newson & Krumm (2009) 经典公式，全程 log 域防下溢：
 - **路由**：同一条 way 内 = 投影间沿 way 累计长度；跨 way = 共享节点间的带界 Dijkstra，搜索界 = `2×dist(z_i,z_{i+1}) + 200m`（我定的可调），早停剪枝。
 - **Viterbi**：全序列最优；初始概率均匀。
 - **无候选点**（100m 内无边）：断链处理——按无候选点切分子序列，各自独立 Viterbi，该点 `cls_by_point=None`（与瓦片法 None 语义一致）。
-- **全轨迹零候选**：视为解析失败抛异常（走现有 road_status=3 重试）。
+- **全轨迹零候选**：返回空契约（`matched_pct=0`、`segments=[]`，成功落库 status=2），与瓦片法「无路可匹配=空结果」降级语义一致；仅基础设施故障（Overpass 全端点失败 RuntimeError）走 road_status=3 重试。
 
 **segments 构建**：Viterbi 输出每点归属 way → 相邻同 way 归并为 run → 跨 gap 的同 way 合并 → 每段字段取自 way tags：`name / name_zh(=tags["name:zh-Hans"] 优先) / ref / network / maxspeed / osm_tags(=tags 整包剔除已拆字段)`；`ref_length / routes` 复用 road_match.py 的行政编号推导逻辑（导入或抽小函数）；`avg_spd` 按现逻辑段内均速；`dist_s/dist_e` 沿轨迹里程（与瓦片法同口径）。
 
