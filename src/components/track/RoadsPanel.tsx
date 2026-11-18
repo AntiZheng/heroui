@@ -109,7 +109,11 @@ function ClsDistChart({ segments }: { segments: TrackRoadRow[] }) {
     }
     return [...byCls.entries()]
       .sort((a, b) => b[1] - a[1])
-      .map(([cls, dist]) => ({ cls, ...clsMeta(cls), km: dist / 1000 }))
+      .map(([cls, dist]) => ({
+        cls,
+        ...(cls === '' ? { label: '未匹配路段', color: '#9ca3af' } : clsMeta(cls)),
+        km: dist / 1000,
+      }))
   }, [segments])
 
   if (rows.length === 0) return <p className="py-8 text-center text-xs text-muted">暂无路段数据</p>
@@ -170,6 +174,7 @@ interface RoadSpeedRow {
   seq: number // 1 起
   name: string
   clsLabel: string
+  unmatched: boolean
   lengthM: number
   spd: number | null
   maxspeedKmh: number | null
@@ -186,8 +191,9 @@ function RoadsSpeedChart({ segments }: { segments: TrackRoadRow[] }) {
     () =>
       segments.map((s, i) => ({
         seq: i + 1,
-        name: s.name_zh ?? s.name ?? '未命名道路',
-        clsLabel: clsMeta(s.road_cls).label,
+        name: s.road_cls === '' ? '未匹配路段' : (s.name_zh ?? s.name ?? '未命名道路'),
+        clsLabel: s.road_cls === '' ? '—' : clsMeta(s.road_cls).label,
+        unmatched: s.road_cls === '',
         lengthM: s.dist_e - s.dist_s,
         spd: s.avg_spd != null && Number.isFinite(s.avg_spd) ? s.avg_spd : null,
         maxspeedKmh: parseMaxspeed(s.maxspeed),
@@ -316,7 +322,7 @@ function RoadsSpeedChart({ segments }: { segments: TrackRoadRow[] }) {
               {rows.map((r, i) => (
                 <Cell
                   key={i}
-                  fill="var(--accent)"
+                  fill={r.unmatched ? 'var(--muted)' : 'var(--accent)'}
                   fillOpacity={
                     r.spd != null && maxSpd > minSpd ? 0.35 + 0.6 * ((r.spd - minSpd) / (maxSpd - minSpd)) : 0.35
                   }
@@ -355,11 +361,14 @@ function RoadsTable({ segments }: { segments: TrackRoadRow[] }) {
           {segments.map((s, i) => (
             <tr key={s.seq} className="border-t border-separator/60 hover:bg-surface-secondary">
               <td className="px-2 py-1.5 font-medium text-foreground">{i + 1}</td>
-              <td className={`max-w-[180px] truncate px-2 py-1.5 ${s.name_zh == null && s.name == null ? 'italic text-muted' : ''}`} title={s.name_zh ?? s.name ?? undefined}>
-                {s.name_zh ?? s.name ?? '未命名道路'}
+              <td
+                className={`max-w-[180px] truncate px-2 py-1.5 ${s.road_cls === '' || (s.name_zh == null && s.name == null) ? 'italic text-muted' : ''}`}
+                title={s.name_zh ?? s.name ?? undefined}
+              >
+                {s.road_cls === '' ? '未匹配路段' : (s.name_zh ?? s.name ?? '未命名道路')}
               </td>
               <td className="px-2 py-1.5">{s.ref ?? '—'}</td>
-              <td className="px-2 py-1.5">{clsMeta(s.road_cls).label}</td>
+              <td className="px-2 py-1.5">{s.road_cls === '' ? '—' : clsMeta(s.road_cls).label}</td>
               <td className="px-2 py-1.5">{surfaceLabel(s.surface)}</td>
               <td className="px-2 py-1.5">{s.brunnel ? BRUNNEL_LABEL[s.brunnel] ?? s.brunnel : '—'}</td>
               <td className="px-2 py-1.5 text-right">{((s.dist_e - s.dist_s) / 1000).toFixed(2)}</td>
