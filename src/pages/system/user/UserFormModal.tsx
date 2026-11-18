@@ -17,6 +17,7 @@ import {
 } from '@heroui/react'
 import { UserRound } from 'lucide-react'
 import FormModal from '../../../components/FormModal'
+import { GradientAvatar } from '../../../components/GradientAvatar'
 import { FormSection, FormSwitch, ReadOnlyInput } from '../../../components/FormSection'
 import { useModalBackdropVariant } from '../../../components/useModalBackdrop'
 import { addUser, editUser, getDeptTree, getUserDetail } from '../../../api/user'
@@ -179,7 +180,7 @@ export default function UserFormModal({ isOpen, editing, onClose }: Props) {
                   className="size-14 rounded-full object-cover"
                 />
               ) : (
-                (form.nickName.slice(0, 1) || 'U').toUpperCase()
+                <GradientAvatar seed={editing?.user_id ?? form.nickName} className="size-14" />
               )}
             </div>
             {canUploadAvatar && (

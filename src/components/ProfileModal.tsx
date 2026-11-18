@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Button, Input, Label, TextField, toast } from '@heroui/react'
 import { Upload, UserRound } from 'lucide-react'
 import FormModal from './FormModal'
+import { GradientAvatar } from './GradientAvatar'
 import { FormSection } from './FormSection'
 import { updateProfileInfo, uploadMyAvatar } from '../api/profile'
 import { useAuthStore } from '../stores/auth'
@@ -117,7 +118,7 @@ export default function ProfileModal({ isOpen, onClose }: Props) {
             {displayAvatar ? (
               <img src={displayAvatar} alt="头像" className="size-16 rounded-full object-cover" />
             ) : (
-              ((nickName.trim().slice(0, 1) || 'U').toUpperCase())
+              <GradientAvatar seed={user?.user_id ?? nickName} className="size-16" />
             )}
           </div>
           <div className="flex items-center gap-2">

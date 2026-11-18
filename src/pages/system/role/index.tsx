@@ -205,25 +205,42 @@ export default function RolePage() {
 
   const renderCell = (row: SysRoleRow, key: string) => {
     switch (key) {
-      case 'status':
-        return (
-          <div className="flex items-center gap-2">
-            <Switch
-              isSelected={statusOf(row) === '0'}
-              onChange={(checked) => handleStatusToggle(row, checked)}
-              aria-label="启用状态"
-            >
-              <SwitchContent>
-                <SwitchControl>
-                  <SwitchThumb />
-                </SwitchControl>
-              </SwitchContent>
-            </Switch>
-            <Chip color={statusOf(row) === '0' ? 'success' : 'danger'} size="sm" variant="soft">
-              {statusOf(row) === '0' ? '正常' : '停用'}
+      case 'status': {
+        const active = statusOf(row) === '0'
+        const label = active ? '正常' : '停用'
+        if (!hasPermission('system:role:edit')) {
+          return (
+            <Chip color={active ? 'success' : 'danger'} size="sm" variant="soft">
+              {label}
             </Chip>
-          </div>
+          )
+        }
+        return (
+          <Switch
+            size="sm"
+            isSelected={active}
+            onChange={(checked) => handleStatusToggle(row, checked)}
+            className="group w-fit [--switch-control-bg:var(--danger-soft)] [--switch-control-bg-hover:var(--danger-soft-hover)] [--switch-control-bg-checked:var(--success-soft)] [--switch-control-bg-checked-hover:var(--success-soft-hover)]"
+          >
+            <SwitchContent className="w-fit text-[12px]!">
+              <SwitchControl className="h-5! w-14! rounded-full!">
+                <SwitchThumb className="size-4! rounded-full! group-data-[selected=true]:ms-[calc(100%-1.25rem)]" />
+                <span
+                  aria-hidden
+                  className={`pointer-events-none absolute inset-y-0 flex items-center font-medium ${
+                    active
+                      ? 'left-2 text-success-soft-foreground'
+                      : 'right-1.5 text-danger-soft-foreground'
+                  }`}
+                >
+                  {label}
+                </span>
+              </SwitchControl>
+              <span className="sr-only">角色状态 {label}</span>
+            </SwitchContent>
+          </Switch>
         )
+      }
       case 'create_time':
         return <span>{String(row.create_time ?? '—').replace('T', ' ').slice(0, 19)}</span>
       case 'actions':

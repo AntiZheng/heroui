@@ -26,6 +26,10 @@ import {
   SelectTrigger,
   SelectValue,
   Spinner,
+  Switch,
+  SwitchContent,
+  SwitchControl,
+  SwitchThumb,
   TableBody,
   TableCell,
   TableColumn,
@@ -38,16 +42,16 @@ import {
   toast,
 } from '@heroui/react'
 import { RotateCcw, Search, Trash2, UserPlus, Users } from 'lucide-react'
-import { deleteUsers, getDeptTree, getUserList } from '../../../api/user'
+import { changeStatus, deleteUsers, getDeptTree, getUserList } from '../../../api/user'
 import { hasPermission } from '../../../stores/auth'
 import BatchDeleteDialog from '../../../components/BatchDeleteDialog'
+import { GradientAvatar } from '../../../components/GradientAvatar'
 import { ColumnSettings, useColPrefs, useStickyColumns } from '../../../components/ColumnSettings'
 import TableCornerOverlays from '../../../components/TableCornerOverlays'
 import SelectionCheckbox from '../../../components/SelectionCheckbox'
 import PageSizeStepper from '../../../components/PageSizeStepper'
 import { flattenDeptTree } from './deptTree'
 import RowActions from './RowActions'
-import StatusSwitch from './StatusSwitch'
 import UserFormModal from './UserFormModal'
 import type { UserListQuery } from '../../../api/user'
 import type { SysUserRow } from '../../../types/user'
@@ -74,7 +78,6 @@ const columns = [
   { key: 'posts', label: '岗位' },
   { key: 'phonenumber', label: '手机号' },
   { key: 'status', label: '状态' },
-  { key: 'status_switch', label: '启用' },
   { key: 'create_time', label: '创建时间' },
   { key: 'actions', label: '操作' },
 ]
@@ -89,6 +92,7 @@ export default function UserPage() {
   const [editing, setEditing] = useState<SysUserRow | null>(null)
   const [selected, setSelected] = useState<Selection>(new Set())
   const [batchOpen, setBatchOpen] = useState(false)
+  const [statusMap, setStatusMap] = useState<Record<number, string>>({})
 
   const tableAreaRef = useRef<HTMLDivElement>(null)
   const colCtrl = useColPrefs({
@@ -145,6 +149,19 @@ export default function UserPage() {
     setSelected(new Set())
   }, [query])
 
+  const statusOf = (row: SysUserRow) => statusMap[row.user_id] ?? row.status
+
+  const handleStatusToggle = async (row: SysUserRow, checked: boolean) => {
+    const next = checked ? '0' : '1'
+    try {
+      await changeStatus(row, next)
+      setStatusMap((m) => ({ ...m, [row.user_id]: next }))
+      toast('成功', { description: '状态修改成功', variant: 'success' })
+    } catch {
+      // 失败保持原状态
+    }
+  }
+
   const handleBatchDelete = async () => {
     const ids = (selected === 'all' ? rowsWithId.map((r) => r.id) : Array.from(selected)).map(Number)
     if (ids.length === 0) return
@@ -187,9 +204,7 @@ export default function UserPage() {
             {row.avatar ? (
               <img src={row.avatar} alt="" className="size-6 shrink-0 rounded-full object-cover" />
             ) : (
-              <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-surface-secondary text-xs text-muted">
-                {(row.nick_name?.slice(0, 1) ?? '—').toUpperCase()}
-              </span>
+              <GradientAvatar seed={row.user_id ?? row.nick_name ?? ''} className="size-6" />
             )}
             <span className="truncate">{row.nick_name || '—'}</span>
           </span>
@@ -212,14 +227,42 @@ export default function UserPage() {
         ) : (
           <span>—</span>
         )
-      case 'status':
+      case 'status': {
+        const active = statusOf(row) === '0'
+        const label = active ? '正常' : '停用'
+        if (!hasPermission('system:user:edit')) {
+          return (
+            <Chip color={active ? 'success' : 'danger'} size="sm" variant="soft">
+              {label}
+            </Chip>
+          )
+        }
         return (
-          <Chip color={row.status === '0' ? 'success' : 'danger'} size="sm" variant="soft">
-            {row.status === '0' ? '正常' : '停用'}
-          </Chip>
+          <Switch
+            size="sm"
+            isSelected={active}
+            onChange={(checked) => handleStatusToggle(row, checked)}
+            className="group w-fit [--switch-control-bg:var(--danger-soft)] [--switch-control-bg-hover:var(--danger-soft-hover)] [--switch-control-bg-checked:var(--success-soft)] [--switch-control-bg-checked-hover:var(--success-soft-hover)]"
+          >
+            <SwitchContent className="w-fit text-[12px]!">
+              <SwitchControl className="h-5! w-14! rounded-full!">
+                <SwitchThumb className="size-4! rounded-full! group-data-[selected=true]:ms-[calc(100%-1.25rem)]" />
+                <span
+                  aria-hidden
+                  className={`pointer-events-none absolute inset-y-0 flex items-center font-medium ${
+                    active
+                      ? 'left-2 text-success-soft-foreground'
+                      : 'right-1.5 text-danger-soft-foreground'
+                  }`}
+                >
+                  {label}
+                </span>
+              </SwitchControl>
+              <span className="sr-only">用户状态 {label}</span>
+            </SwitchContent>
+          </Switch>
         )
-      case 'status_switch':
-        return <StatusSwitch row={row} />
+      }
       case 'actions':
         return <RowActions row={row} onEdit={openEdit} />
       case 'create_time':
@@ -358,7 +401,7 @@ export default function UserPage() {
               <TableBody
                 items={rowsWithId}
                 // RAC 会缓存行渲染结果，列集变化时需靠 dependencies 强制重建行，否则单元格数与表头不一致抛错白屏
-                dependencies={[visibleColumns]}
+                dependencies={[visibleColumns, statusMap]}
                 renderEmptyState={() =>
                   isPending ? (
                     <Spinner />
