@@ -24,7 +24,7 @@ function PlatformTitle() {
   return null
 }
 
-// 全局按钮样式同步：参数设置 sys.ui.button.style 为 flat 时在 html 上挂 .button-flat
+// 全局按钮样式同步：参数设置 sys.ui.style 为 flat 时在 html 上挂 .button-flat
 // 关闭 3D 玻璃釉面；未配置或值为 3d 时保持立体效果（默认）
 function ButtonStyleSync() {
   const { data } = useQuery({

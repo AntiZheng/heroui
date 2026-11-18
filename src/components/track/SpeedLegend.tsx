@@ -60,7 +60,7 @@ export function SpeedLegend({ points, range, onChange }: SpeedLegendProps) {
     'size-3 rounded-full border-2 border-white bg-blue-500 shadow-md transition-transform'
 
   return (
-    <div className="absolute bottom-3 left-3 z-40 flex items-center gap-1.5 rounded-lg bg-white/10 px-1.5 py-1.5 ring-1 ring-white/15 dark:bg-black/20 dark:ring-white/10">
+    <div className="absolute bottom-3 left-3 z-40 flex items-center gap-1.5">
       <div
         ref={barRef}
         className="relative h-5 w-36"

@@ -14,9 +14,10 @@ import {
   TooltipTrigger,
   Typography,
 } from '@heroui/react'
-import { ChevronDown, Home, LayoutGrid, LogOut, Monitor, Moon, PanelLeft, Sun, UserRound } from 'lucide-react'
+import { ChevronDown, LayoutGrid, LogOut, Monitor, Moon, PanelLeft, Sun, UserRound } from 'lucide-react'
 import { useAuthStore } from '../../stores/auth'
 import ProfileModal from '../ProfileModal'
+import { GradientAvatar } from '../GradientAvatar'
 import { useThemeStore } from '../../stores/theme'
 import { getConfigByKey, PLATFORM_NAME_KEY } from '../../api/config'
 import { logout } from '../../api/auth'
@@ -71,7 +72,7 @@ export default function AppShell({ menus }: { menus: SysMenuRow[] }) {
   }
 
   const itemClass = (active: boolean) =>
-    `flex h-9 w-full cursor-pointer items-center gap-3 rounded-full text-left text-xs transition-colors ${
+    `nav-item flex h-9 w-full cursor-pointer items-center gap-3 rounded-full text-left text-xs transition-colors ${
       active
         ? 'nav-item-active font-medium'
         : 'text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground dark:hover:bg-white/[0.06]'
@@ -151,7 +152,7 @@ export default function AppShell({ menus }: { menus: SysMenuRow[] }) {
   }
 
   return (
-    <div className="relative isolate flex h-screen gap-3 bg-background p-3">
+    <div className="app-shell-root relative isolate flex h-screen gap-3 bg-background p-3">
       <div aria-hidden className="chrome-ambient pointer-events-none absolute inset-0 -z-10" />
       <aside
         className={`chrome-glass flex shrink-0 flex-col rounded-2xl border border-separator transition-[width] duration-200 ${
@@ -202,11 +203,7 @@ export default function AppShell({ menus }: { menus: SysMenuRow[] }) {
                 key={`${crumb.label}-${i}`}
                 onPress={crumb.path ? () => navigate(crumb.path!) : undefined}
               >
-                {i === 0 ? (
-                  <Home size={14} aria-label="首页" className="text-muted" />
-                ) : (
-                  crumb.label
-                )}
+                {crumb.label}
               </Breadcrumbs.Item>
             ))}
           </Breadcrumbs>
@@ -247,7 +244,7 @@ export default function AppShell({ menus }: { menus: SysMenuRow[] }) {
                   className="size-7 rounded-full object-cover"
                 />
               ) : (
-                (user?.nick_name?.slice(0, 1) ?? 'A')
+                <GradientAvatar seed={user?.user_id ?? user?.nick_name ?? ''} className="size-7" />
               )}
             </DropdownTrigger>
             <DropdownPopover placement="bottom end">

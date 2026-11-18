@@ -44,7 +44,7 @@ export const MODAL_BACKDROP_OPTIONS = [
 export type ModalBackdropVariant = (typeof MODAL_BACKDROP_OPTIONS)[number]['key']
 
 // 全局按钮样式：3d 为玻璃釉面立体效果（默认），flat 为扁平无阴影
-export const BUTTON_STYLE_KEY = 'sys.ui.button.style'
+export const BUTTON_STYLE_KEY = 'sys.ui.style'
 
 export const BUTTON_STYLE_OPTIONS = [
   { key: '3d', label: '立体玻璃釉面' },

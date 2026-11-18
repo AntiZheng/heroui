@@ -54,6 +54,38 @@
     radial-gradient(40rem 28rem at 6% 100%, var(--chrome-ambient-warm), transparent 76%);
 }
 
+/* 按钮切扁平（参数设置 sys.ui.style=flat）时 chrome 同步去玻璃：
+   侧栏/顶栏实底与画布同调、去模糊/高光/投影，环境光层整体隐藏；
+   html.button-flat .chrome-glass 优先级高于 .dark .chrome-glass 的暗色模糊分支 */
+html.button-flat .chrome-glass {
+  background-color: var(--background);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+html.button-flat .chrome-ambient {
+  display: none;
+}
+
+/* 扁平模式下 chrome 贴边平铺（对齐参考截图）：去画布留白与悬浮卡片外形，
+   侧栏只留右缘 hairline、顶栏只留下缘 hairline，整块融进画布 */
+html.button-flat .app-shell-root {
+  padding: 0;
+  gap: 0;
+}
+html.button-flat aside.chrome-glass {
+  border-width: 0 1px 0 0;
+  border-radius: 0;
+}
+html.button-flat header.chrome-glass {
+  border-width: 0 0 1px 0;
+  border-color: var(--separator);
+  border-radius: 0;
+  margin-left: 0;
+  margin-right: 0;
+  padding-left: 1.5rem;
+}
+
 /* HeroUI Tooltip 默认 --tooltip-delay 为 1500ms，悬停需等 1.5s 才弹出；调到 300ms 即时反馈 */
 :root,
 .dark {
@@ -162,7 +194,7 @@
 }
 
 /* 按钮玻璃釉面：不改变各变体底色，只叠加顶部高光、内边缘光与外投影。
-   全部效果走 CSS 变量，由参数设置 sys.ui.button.style 控制——
+   全部效果走 CSS 变量，由参数设置 sys.ui.style 控制——
    html 上挂 .button-flat 时变量置空即整体切回扁平（默认 3d 立体） */
 :root {
   --button-shadow:
@@ -293,11 +325,16 @@ html.button-flat {
     0 8px 18px -10px rgb(0 0 0 / 0.6);
 }
 
-/* 按钮切扁平（参数设置 sys.ui.button.style=flat）时，侧栏选中项同步去釉面：
-   只留软色底与字色，优先级需压过 .dark 的玻璃釉面 */
+/* 按钮切扁平（参数设置 sys.ui.style=flat）时，侧栏导航项对齐参考截图：
+   去胶囊圆角降到 8px，选中项灰底深字（不再是软蓝底），优先级需压过 .dark 的玻璃釉面 */
+html.button-flat .nav-item {
+  border-radius: 0.5rem;
+}
 html.button-flat .nav-item-active {
   background-image: none;
   box-shadow: none;
+  background-color: var(--default);
+  color: var(--foreground);
 }
 
 /* 面包屑字号 13px：HeroUI .breadcrumbs__link 基类默认 text-sm（14px），
@@ -307,10 +344,11 @@ html.button-flat .nav-item-active {
   line-height: 1.1rem;
 }
 
-/* 面包屑末项（当前页）与其余项保持一致：React Aria 给 current 项加 aria-disabled，
-   HeroUI .link[aria-disabled=true] 会带入 50% 透明度，这里还原为不透明 */
+/* 面包屑末项（当前页）与其余项保持一致：HeroUI 给 data-current 项加 text-link（链接蓝），
+   这里压回前面项同款 muted 灰（RAC aria-disabled 的 50% 透明度同样需还原为不透明） */
 .breadcrumbs__item[data-current] .breadcrumbs__link {
   opacity: 1;
+  color: var(--muted);
 }
 
 /* 搜索框输入字号压到 12px：HeroUI .search-field__input 基类默认 text-base / sm:text-sm */
@@ -348,6 +386,25 @@ html.button-flat .nav-item-active {
     inset 0 1px 2px rgb(0 0 0 / 0.45),
     inset 0 3px 8px -4px rgb(0 0 0 / 0.5),
     inset 0 -1px 0 rgb(255 255 255 / 0.07);
+}
+
+/* 按钮切扁平（参数设置 sys.ui.style=flat）时搜索框与选项类控件对齐参考截图：
+   去内凹玻璃，灰底填充（--default）、去描边；分页条数触发器维持刻意排除——
+   inset 置回 Tailwind 的透明初始值而非 none：--tw-inset-shadow 与焦点环共用同一条
+   box-shadow 组合，写 none 会使整条声明失效、焦点环一起丢 */
+html.button-flat .search-field__group,
+html.button-flat .select__trigger:not(.page-size-stepper-trigger) {
+  --tw-inset-shadow: inset 0 0 #0000;
+  background-color: var(--default);
+  border-color: transparent;
+}
+@media (hover: hover) {
+  html.button-flat .search-field__group:hover,
+  html.button-flat .select__trigger:not(.page-size-stepper-trigger):hover,
+  html.button-flat .select__trigger:not(.page-size-stepper-trigger)[data-hovered='true'] {
+    background-color: var(--default-hover);
+    border-color: transparent;
+  }
 }
 
 /* 表格行高压缩一档：单元格与表头的上下内边距 10px→8px（HeroUI 默认 py-2.5） */
