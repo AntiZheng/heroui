@@ -75,7 +75,7 @@ const fmtKm = (m: number) => `${parseFloat((m / 1000).toFixed(2))} km`
 
 function RoadMetricCard({ label, value, hint, icon }: { label: string; value: React.ReactNode; hint?: string; icon?: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-white/50 bg-white/35 px-3 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:border-white/15 dark:bg-white/10">
+    <div className="rounded-xl border border-separator bg-surface px-3 py-1.5">
       <p className="flex items-center gap-1 text-[11px] leading-4 text-muted">
         {icon ? <span className="shrink-0 text-accent">{icon}</span> : null}
         {label}
@@ -341,20 +341,20 @@ function RoadsSpeedChart({ segments }: { segments: TrackRoadRow[] }) {
 function RoadsTable({ segments }: { segments: TrackRoadRow[] }) {
   return (
     // 内容放不下时横向滚动（隐藏滚动条），行内容一律单行不换行
-    <div className="max-h-64 overflow-y-auto rounded-lg border border-white/30 [scrollbar-width:thin] dark:border-white/10 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar]:w-1.5">
+    <div className="max-h-64 overflow-y-auto rounded-lg border border-separator [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar]:w-1.5">
       <table className="w-max min-w-full whitespace-nowrap text-xs">
         <thead className="sticky top-0 z-10 text-muted">
           <tr>
             {/* 背景必须放在 th 上（thead 上 backdrop-filter 不生效），且接近不透明才能盖住滚动行 */}
-            <th className="bg-white/95 px-2 py-1.5 text-left font-medium backdrop-blur-sm dark:bg-black/85">序号</th>
-            <th className="bg-white/95 px-2 py-1.5 text-left font-medium backdrop-blur-sm dark:bg-black/85">道路</th>
-            <th className="bg-white/95 px-2 py-1.5 text-left font-medium backdrop-blur-sm dark:bg-black/85">编号</th>
-            <th className="bg-white/95 px-2 py-1.5 text-left font-medium backdrop-blur-sm dark:bg-black/85">等级</th>
-            <th className="bg-white/95 px-2 py-1.5 text-left font-medium backdrop-blur-sm dark:bg-black/85">路面</th>
-            <th className="bg-white/95 px-2 py-1.5 text-left font-medium backdrop-blur-sm dark:bg-black/85">桥隧</th>
-            <th className="bg-white/95 px-2 py-1.5 text-right font-medium backdrop-blur-sm dark:bg-black/85">长度（km）</th>
-            <th className="bg-white/95 px-2 py-1.5 text-right font-medium backdrop-blur-sm dark:bg-black/85">均速（km/h）</th>
-            <th className="bg-white/95 px-2 py-1.5 text-right font-medium backdrop-blur-sm dark:bg-black/85">限速（km/h）</th>
+            <th className="bg-surface-secondary px-2 py-1.5 text-left font-medium">序号</th>
+            <th className="bg-surface-secondary px-2 py-1.5 text-left font-medium">道路</th>
+            <th className="bg-surface-secondary px-2 py-1.5 text-left font-medium">编号</th>
+            <th className="bg-surface-secondary px-2 py-1.5 text-left font-medium">等级</th>
+            <th className="bg-surface-secondary px-2 py-1.5 text-left font-medium">路面</th>
+            <th className="bg-surface-secondary px-2 py-1.5 text-left font-medium">桥隧</th>
+            <th className="bg-surface-secondary px-2 py-1.5 text-right font-medium">长度（km）</th>
+            <th className="bg-surface-secondary px-2 py-1.5 text-right font-medium">均速（km/h）</th>
+            <th className="bg-surface-secondary px-2 py-1.5 text-right font-medium">限速（km/h）</th>
           </tr>
         </thead>
         <tbody>
@@ -421,7 +421,7 @@ export function RoadsPanel({ segments, matchedPct }: RoadsPanelProps) {
       {/* 图表纵向堆叠（右侧抽屉窄栏） */}
       <div className="flex flex-col gap-4">
         {/* 类型分布 */}
-        <div className="flex flex-col rounded-2xl border border-white/45 bg-white/30 p-2 shadow-[0_2px_10px_rgba(0,0,0,0.08)] dark:border-white/15 dark:bg-white/10">
+        <div className="flex flex-col rounded-2xl border border-separator bg-surface p-2">
           <div className="mb-1 flex items-center justify-between">
             <span className="text-xs font-medium text-muted/75">道路等级里程分布</span>
           </div>
@@ -431,7 +431,7 @@ export function RoadsPanel({ segments, matchedPct }: RoadsPanelProps) {
         </div>
 
         {/* 逐路段均速 */}
-        <div className="flex flex-col rounded-2xl border border-white/45 bg-white/30 p-2 shadow-[0_2px_10px_rgba(0,0,0,0.08)] dark:border-white/15 dark:bg-white/10">
+        <div className="flex flex-col rounded-2xl border border-separator bg-surface p-2">
           <div className="mb-1 flex items-center justify-between">
             <span className="text-xs font-medium text-muted/75">逐路段均速（km/h）</span>
           </div>
@@ -442,7 +442,7 @@ export function RoadsPanel({ segments, matchedPct }: RoadsPanelProps) {
       </div>
 
       {/* 明细表 */}
-      <div className="flex flex-col rounded-2xl border border-white/45 bg-white/30 p-2 shadow-[0_2px_10px_rgba(0,0,0,0.08)] dark:border-white/15 dark:bg-white/10">
+      <div className="flex flex-col rounded-2xl border border-separator bg-surface p-2">
         <div className="mb-1 flex items-center justify-between">
           <span className="text-xs font-medium text-muted/75">路段明细（{segments.length} 段）</span>
         </div>

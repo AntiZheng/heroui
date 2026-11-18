@@ -98,6 +98,24 @@ const TRACK_COLUMNS = [
   { key: 'create_time', label: '导入时间' },
   { key: 'actions', label: '操作' },
 ]
+
+// 数值列单位放表头（单元格只显纯数字）；key → 单位
+const TRACK_COLUMN_UNITS: Record<string, string> = {
+  distance_m: 'km',
+  avg_speed_kmh: 'km/h',
+  max_speed_kmh: 'km/h',
+  ascent_m: 'm',
+}
+
+// 数值列右对齐（表头与单元格同步）：个位对齐便于纵向比较
+const TRACK_NUMERIC_KEYS = new Set([
+  'distance_m',
+  'duration_s',
+  'avg_speed_kmh',
+  'max_speed_kmh',
+  'ascent_m',
+  'point_count',
+])
 const TRACK_COLOR = '#3b82f6'
 const SERIES_COLORS = { speed: '#3b82f6', pace: '#f59e0b', ele: '#10b981', cumdist: '#8b5cf6' }
 
@@ -241,7 +259,7 @@ function BasemapToggleControl({
 
 function MetricCard({ label, value, hint, icon }: { label: string; value: ReactNode; hint?: string; icon?: ReactNode }) {
   return (
-    <div className="rounded-xl border border-white/50 bg-white/35 px-3 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:border-white/15 dark:bg-white/10">
+    <div className="rounded-xl border border-separator bg-surface px-3 py-1.5">
       <p className="flex items-center gap-1 text-[11px] leading-4 text-muted">
         {icon ? <span className="shrink-0 text-accent">{icon}</span> : null}
         {label}
@@ -277,8 +295,8 @@ function BottomDrawer({
       }`}
     >
       <div
-        className={`pointer-events-auto rounded-2xl border border-white/40 bg-white/15 shadow-2xl backdrop-blur-2xl backdrop-saturate-150 transition-[width] duration-300 dark:border-white/10 dark:bg-black/35 [box-shadow:inset_0_1px_0_0_rgba(255,255,255,0.4),0_8px_32px_rgba(0,0,0,0.15)] ${
-          open ? 'w-full' : 'w-fit'
+        className={`pointer-events-auto rounded-2xl border border-separator transition-[width] duration-300 ${
+          open ? 'w-full bg-default shadow-lg' : 'w-fit bg-default shadow-md hover:bg-(--default-hover)'
         }`}
       >
         <button
@@ -290,7 +308,7 @@ function BottomDrawer({
           {icon}
           <span className="text-[13px] font-semibold text-foreground">{title}</span>
           {summary}
-          <span className="ml-auto flex size-6 shrink-0 items-center justify-center rounded-full bg-white/30 text-muted dark:bg-white/10">
+          <span className="ml-auto flex size-6 shrink-0 items-center justify-center rounded-full bg-surface text-muted">
             {open ? <ChevronDown size={14} aria-hidden /> : <ChevronUp size={14} aria-hidden />}
           </span>
         </button>
@@ -525,7 +543,7 @@ function TrackDetailView({ row, onBack }: DetailProps) {
 
                 <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                   {/* 曲线图 */}
-                  <div className="flex h-full flex-col rounded-2xl border border-white/45 bg-white/30 p-2 shadow-[0_2px_10px_rgba(0,0,0,0.08)] dark:border-white/15 dark:bg-white/10">
+                  <div className="flex h-full flex-col rounded-2xl border border-separator bg-surface p-2">
                     <div className="mb-1 flex flex-wrap items-center gap-1">
                       {metricTabs.map((t) => (
                         <button
@@ -576,7 +594,7 @@ function TrackDetailView({ row, onBack }: DetailProps) {
                   </div>
 
                   {/* 每公里分段（图表/表格切换，压缩高度） */}
-                  <div className="flex h-full flex-col rounded-2xl border border-white/45 bg-white/30 p-2 shadow-[0_2px_10px_rgba(0,0,0,0.08)] dark:border-white/15 dark:bg-white/10">
+                  <div className="flex h-full flex-col rounded-2xl border border-separator bg-surface p-2">
                     <div className="mb-1 flex items-center justify-between">
                       <span className="text-xs font-medium text-muted/75">每公里分段</span>
                       {/* 与左侧折线图卡片同款的 tab 按钮（text-xs font-medium + accent-soft 选中态） */}
@@ -607,16 +625,16 @@ function TrackDetailView({ row, onBack }: DetailProps) {
                         <SplitsChart splits={analysis.splits} height={120} />
                       </div>
                     ) : (
-                      <div className="max-h-64 overflow-y-auto rounded-lg border border-white/30 dark:border-white/10">
+                      <div className="max-h-64 overflow-y-auto rounded-lg border border-separator">
                         <table className="w-full text-xs">
                           <thead className="sticky top-0 z-10 text-muted">
                             <tr>
                               {/* 背景必须放在 th 上（thead 上 backdrop-filter 不生效），且接近不透明才能盖住滚动行 */}
-                              <th className="bg-white/95 px-2 py-1.5 text-left font-medium backdrop-blur-sm dark:bg-black/85">公里</th>
-                              <th className="bg-white/95 px-2 py-1.5 text-left font-medium backdrop-blur-sm dark:bg-black/85">用时</th>
-                              <th className="bg-white/95 px-2 py-1.5 text-left font-medium backdrop-blur-sm dark:bg-black/85">均速</th>
-                              <th className="bg-white/95 px-2 py-1.5 text-left font-medium backdrop-blur-sm dark:bg-black/85">配速</th>
-                              <th className="bg-white/95 px-2 py-1.5 text-left font-medium backdrop-blur-sm dark:bg-black/85">爬升</th>
+                              <th className="bg-surface-secondary px-2 py-1.5 text-left font-medium">公里</th>
+                              <th className="bg-surface-secondary px-2 py-1.5 text-left font-medium">用时</th>
+                              <th className="bg-surface-secondary px-2 py-1.5 text-left font-medium">均速</th>
+                              <th className="bg-surface-secondary px-2 py-1.5 text-left font-medium">配速</th>
+                              <th className="bg-surface-secondary px-2 py-1.5 text-left font-medium">爬升</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -640,27 +658,29 @@ function TrackDetailView({ row, onBack }: DetailProps) {
         ) : null}
         {panelOpen === null ? (
           /* 路段分析把手：与轨迹分析把手并排（点击从右侧滑出面板，ChevronRight 指示展开方向） */
-          <button
-            type="button"
-            onClick={() => setPanelOpen((v) => (v === 'roads' ? null : 'roads'))}
-            aria-expanded={false}
-            className="pointer-events-auto flex items-center gap-3 whitespace-nowrap rounded-2xl border border-white/40 bg-white/15 px-4 py-3 shadow-2xl backdrop-blur-2xl backdrop-saturate-150 transition-colors dark:border-white/10 dark:bg-black/35 [box-shadow:inset_0_1px_0_0_rgba(255,255,255,0.4),0_8px_32px_rgba(0,0,0,0.15)]"
-          >
-            <Route size={15} className="shrink-0 text-accent" aria-hidden />
-            <span className="text-[13px] font-semibold text-foreground">路段分析</span>
-            <span className="text-xs font-medium text-foreground">
-              {roadSegments.length > 0
-                ? `路段 ${roadSegments.length} · 匹配 ${(roadsData?.matched_pct ?? 0).toFixed(1)}%`
-                : row.road_status === '1'
-                  ? '解析中…'
-                  : row.road_status === '3'
-                    ? '解析失败·重试中'
-                    : '未解析'}
-            </span>
-            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-white/30 text-muted dark:bg-white/10">
-              <ChevronRight size={14} aria-hidden />
-            </span>
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => setPanelOpen((v) => (v === 'roads' ? null : 'roads'))}
+              aria-expanded={false}
+              className="pointer-events-auto flex items-center gap-3 whitespace-nowrap rounded-2xl border border-separator bg-default px-4 py-3 shadow-md transition-colors hover:bg-(--default-hover)"
+            >
+              <Route size={15} className="shrink-0 text-accent" aria-hidden />
+              <span className="text-[13px] font-semibold text-foreground">路段分析</span>
+              <span className="text-xs font-medium text-foreground">
+                {roadSegments.length > 0
+                  ? `路段 ${roadSegments.length} · 匹配 ${(roadsData?.matched_pct ?? 0).toFixed(1)}%`
+                  : row.road_status === '1'
+                    ? '解析中…'
+                    : row.road_status === '3'
+                      ? '解析失败·重试中'
+                      : '未解析'}
+              </span>
+              <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-surface text-muted">
+                <ChevronRight size={14} aria-hidden />
+              </span>
+            </button>
+          </>
         ) : null}
       </div>
 
@@ -668,11 +688,11 @@ function TrackDetailView({ row, onBack }: DetailProps) {
           容器直接定宽 w-1/2（相对地图内容区一半、贴右缘），面板撑满容器——
           若容器收缩自适应，面板的百分比宽度会算在容器上导致不对齐 */}
       <div
-        className={`pointer-events-none absolute inset-y-0 right-0 z-30 w-3/5 max-w-[92vw] transform transition-transform duration-300 ease-out ${
+        className={`pointer-events-none absolute inset-y-0 right-0 z-30 w-1/2 max-w-[92vw] transform transition-transform duration-300 ease-out ${
           panelOpen === 'roads' ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
-        <div className="pointer-events-auto flex h-full w-full flex-col rounded-l-2xl border border-white/40 bg-white/15 shadow-2xl backdrop-blur-2xl backdrop-saturate-150 dark:border-white/10 dark:bg-black/35 [box-shadow:inset_0_1px_0_0_rgba(255,255,255,0.4),0_8px_32px_rgba(0,0,0,0.15)]">
+        <div className="pointer-events-auto flex h-full w-full flex-col rounded-l-2xl border border-separator bg-default shadow-lg">
           {/* 标题栏 */}
           <div className="flex items-center gap-3 border-b border-separator px-4 py-3">
             <Route size={15} className="shrink-0 text-accent" aria-hidden />
@@ -688,7 +708,7 @@ function TrackDetailView({ row, onBack }: DetailProps) {
               onClick={() => setPanelOpen((v) => (v === 'roads' ? null : 'roads'))}
               aria-expanded={panelOpen === 'roads'}
               aria-label="收起路段分析"
-              className="ml-auto flex size-6 shrink-0 items-center justify-center rounded-full bg-white/30 text-muted transition-colors hover:text-foreground dark:bg-white/10"
+              className="ml-auto flex size-6 shrink-0 items-center justify-center rounded-full bg-surface text-muted transition-colors hover:text-foreground"
             >
               <ChevronRight size={14} aria-hidden />
             </button>
@@ -840,15 +860,15 @@ export default function TrackPage() {
         )
       }
       case 'distance_m':
-        return fmtDistance(row.distance_m)
+        return row.distance_m == null ? '—' : (row.distance_m / 1000).toFixed(2)
       case 'duration_s':
         return fmtDuration(row.duration_s)
       case 'avg_speed_kmh':
-        return fmtSpeed(row.avg_speed_kmh)
+        return row.avg_speed_kmh == null ? '—' : row.avg_speed_kmh.toFixed(1)
       case 'max_speed_kmh':
-        return fmtSpeed(row.max_speed_kmh)
+        return row.max_speed_kmh == null ? '—' : row.max_speed_kmh.toFixed(1)
       case 'ascent_m':
-        return `${row.ascent_m} m`
+        return row.ascent_m == null ? '—' : `${row.ascent_m}`
       case 'point_count':
         return row.point_count
       case 'start_time':
@@ -1010,7 +1030,9 @@ export default function TrackPage() {
                     </TableColumn>
                     {visibleColumns.map((col) => {
                       const sticky = stickyColProps(col.key, true)
-                      const merged = `whitespace-nowrap ${'className' in sticky ? sticky.className : ''}`
+                      const merged = `whitespace-nowrap ${
+                        TRACK_NUMERIC_KEYS.has(col.key) ? 'text-right' : ''
+                      } ${'className' in sticky ? sticky.className : ''}`
                       return (
                         <TableColumn
                           key={col.key}
@@ -1020,6 +1042,9 @@ export default function TrackPage() {
                           className={merged}
                         >
                           {col.label}
+                          {TRACK_COLUMN_UNITS[col.key] && (
+                            <span className="font-normal text-muted"> ({TRACK_COLUMN_UNITS[col.key]})</span>
+                          )}
                         </TableColumn>
                       )
                     })}
@@ -1045,11 +1070,17 @@ export default function TrackPage() {
                         <TableCell key="__select" className="pe-0!">
                           <SelectionCheckbox label={`选择 ${row.track_name ?? row.id}`} variant="secondary" />
                         </TableCell>
-                        {visibleColumns.map((col) => (
-                          <TableCell key={col.key} {...stickyColProps(col.key, false)}>
-                            {renderCell(row, col.key)}
-                          </TableCell>
-                        ))}
+                        {visibleColumns.map((col) => {
+                          const sticky = stickyColProps(col.key, false)
+                          const merged = `${
+                            TRACK_NUMERIC_KEYS.has(col.key) ? 'text-right' : ''
+                          } ${'className' in sticky ? sticky.className : ''}`
+                          return (
+                            <TableCell key={col.key} {...sticky} className={merged}>
+                              {renderCell(row, col.key)}
+                            </TableCell>
+                          )
+                        })}
                       </TableRow>
                     )}
                   </TableBody>
